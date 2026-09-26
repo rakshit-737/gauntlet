@@ -3,5 +3,5 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 report*.json
-data/
+/data/
 results/cache/
