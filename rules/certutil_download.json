@@ -1,0 +1,16 @@
+{
+  "id": "certutil_download",
+  "title": "Certutil URL cache download",
+  "techniques": [
+    "T1105"
+  ],
+  "logsource": "sysmon",
+  "detection": {
+    "selection": {
+      "EventID": 1,
+      "Image|endswith": "\\certutil.exe",
+      "CommandLine|contains": "-urlcache"
+    },
+    "condition": "selection"
+  }
+}
