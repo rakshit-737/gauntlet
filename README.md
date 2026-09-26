@@ -34,6 +34,8 @@ Full tables: [`results/RESULTS.md`](results/RESULTS.md). Reproduce with `python 
 | SigmaHQ *core* (stable/test, high/critical) | 1,365 | **66.7%** | 57.4% | 61.1% | 53.1% | 11.2 |
 | SigmaHQ *all* Windows rules | 2,519 | **81.5%** | 66.7% | 77.8% | 69.8% | 53.7 |
 
+The baseline is 6 of the 7 v0.1 rules in `rules/`. The password-spray rule is a count threshold with no Sigma equivalent here, so it is not replayed.
+
 - **Coverage sprint.** The v0.1 baseline covers 5.6% of recorded techniques. Adding only the **10 greedily chosen "cheapest-win" Sigma rules** takes it to **35.2%**, or 44.6% when weighted by the ransomware profile.
 - **Precision cost.** Going from *core* to *all* adds 15 points of coverage and roughly 5x the off-target alerts (11 to 54 per 10k events).
 - **Telemetry ablation** (core rules). Dropping Sysmon loses 5 detected techniques. Dropping the Security log loses 3. Dropping PowerShell/Operational loses 1.
@@ -47,11 +49,12 @@ Leave-one-group-out test: rank the 266 ART-emulatable techniques using every *ot
 | ransomware (18) | **118.9** | 194.4 | 211.9 | 0.718 vs 0.568 |
 | espionage (57) | **103.2** | 196.8 | 211.2 | 0.761 vs 0.580 |
 | financial (24) | **123.7** | 201.9 | 211.8 | 0.727 vs 0.569 |
+| cloud (4) | 147.2 (prevalence alone: **123.0**) | 196.2 | 210.7 | 0.692 vs 0.577 |
 
 <p align="center"><img src="results/prioritization_ransomware.png" width="620" alt="Recall of held-out ransomware actor techniques versus number of techniques emulated, per ordering strategy"></p>
 
-The answer is **yes**. CTI ordering needs about 40% fewer emulations than breadth-first to reach 80% of a held-out actor's techniques.
-Profile-specific relevance adds little on top of global ATT&CK prevalence: `prevalence` alone ties `cti` on espionage and financial. Most of the value comes from "what is common everywhere", not from actor-specific tailoring.
+The answer is **yes**. CTI ordering needs 39-48% fewer emulations than breadth-first to reach 80% of a held-out actor's techniques on the three larger profiles (25% on the 4-group cloud profile).
+Profile-specific relevance adds little on top of global ATT&CK prevalence: `prevalence` alone ties `cti` on espionage and financial, and beats it on cloud, where only 4 groups inform the relevance term. Most of the value comes from "what is common everywhere", not from actor-specific tailoring.
 
 **Next-technique prediction.** An item-item co-occurrence model trained on ATT&CK group technique sets (leave-one-group-out, half of each group hidden) reaches recall@10 of 0.235, against 0.191 for a popularity baseline at sub-technique level. At technique level it is 0.311 against 0.278.
 
