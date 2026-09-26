@@ -1,0 +1,1 @@
+{"id":"ransom_ext","title":"Files renamed to ransom extension","techniques":["T1486"],"logsource":"sysmon","detection":{"selection":{"EventID":11,"TargetFilename|endswith":[".locked",".encrypted"]},"condition":"selection"}}
