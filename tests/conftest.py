@@ -45,7 +45,8 @@ def mini_bundle() -> dict:
          "external_references": [{"source_name": "mitre-attack", "external_id": "S0001"}]},
         {"type": "x-mitre-tactic", "id": "x-mitre-tactic--1", "x_mitre_shortname": "initial-access"},
         {"type": "x-mitre-tactic", "id": "x-mitre-tactic--2", "x_mitre_shortname": "execution"},
-        {"type": "x-mitre-matrix", "id": "x-mitre-matrix--1", "tactic_refs": ["x-mitre-tactic--1", "x-mitre-tactic--2"]},
+        {"type": "x-mitre-matrix", "id": "x-mitre-matrix--1",
+         "tactic_refs": ["x-mitre-tactic--1", "x-mitre-tactic--2"]},
     ]
     uses = {"G0001": ["T1059.001", "T1003.001", "T1486"], "G0002": ["T1059.001", "T1490"],
             "G0003": ["T1566.001", "T1059.001", "T1082"]}
