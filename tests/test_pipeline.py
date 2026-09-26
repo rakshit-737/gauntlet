@@ -2,12 +2,11 @@
 import json
 
 import pytest
+from conftest import mini_bundle
 
 from gauntlet import atomics, cli, coverage, mordor, paths, predict, prioritize, replay
 from gauntlet.attack import KnowledgeBase, load_kb, parse_stix
 from gauntlet.sigma import load_rules
-
-from conftest import mini_bundle
 
 
 # ------------------------------------------------------------------ ATT&CK
