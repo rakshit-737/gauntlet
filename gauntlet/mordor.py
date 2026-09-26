@@ -30,7 +30,17 @@ class Dataset:
 
     @property
     def available(self) -> bool:
-        return bool(self.files) and all(f.exists() for f in self.files)
+        """All host recordings present *and readable* (local AV may quarantine some)."""
+        return bool(self.files) and all(_readable(f) for f in self.files)
+
+
+def _readable(p: Path) -> bool:
+    try:
+        with p.open("rb") as fh:
+            fh.read(4)
+        return True
+    except OSError:
+        return False
 
 
 def _techniques(meta: dict[str, Any]) -> tuple[str, ...]:
