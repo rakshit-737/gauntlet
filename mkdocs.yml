@@ -1,0 +1,53 @@
+site_name: GAUNTLET
+site_description: Threat-informed purple-team coverage scoring on real ATT&CK, Sigma and recorded attack telemetry
+site_url: https://rakshit-737.github.io/gauntlet/
+repo_url: https://github.com/rakshit-737/gauntlet
+repo_name: rakshit-737/gauntlet
+edit_uri: edit/main/docs/
+theme:
+  name: material
+  features: [navigation.sections, content.code.copy, navigation.top]
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: {icon: material/weather-sunny, name: Light mode}
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Architecture: architecture.md
+  - Datasets: DATASETS.md
+  - Benchmarks: benchmarks.md
+  - Coverage explorer (demo): demo/index.html
+  - CLI & API reference: reference.md
+  - Threat model: threat-model.md
+  - Security: security.md
+  - ADRs:
+      - adr/index.md
+      - adr/0001-replay-recorded-telemetry.md
+      - adr/0002-sigma-evaluator.md
+      - adr/0003-cti-prioritization-from-attack-groups.md
+      - adr/0004-safety-boundary.md
+  - Changelog: changelog.md
+  - Limitations & roadmap: limitations.md
+markdown_extensions:
+  - admonition
+  - tables
+  - attr_list
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options: {show_source: false, docstring_style: google, show_root_heading: true, heading_level: 3}

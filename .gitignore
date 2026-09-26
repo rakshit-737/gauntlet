@@ -6,3 +6,8 @@ report*.json
 /data/
 results/cache/
 layer.json
+site/
+docs/assets/results/
+docs/demo/data/
+build/
+dist/

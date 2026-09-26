@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAUNTLET coverage explorer</title>
+<style>
+:root{--bg:#fbfbfa;--fg:#1d1d1f;--muted:#666;--line:#ddd;--det:#2e7d32;--par:#e0a100;--mis:#c62828;--card:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--fg:#ececec;--muted:#9a9a9a;--line:#333;--card:#1d1d20}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}h1{font-size:1.5rem;margin:.2em 0}h2{font-size:1.1rem;margin:1.6em 0 .5em}
+p.sub{color:var(--muted);margin:0 0 1em}a{color:inherit}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}select,input{font:inherit;padding:4px 8px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.kpi b{display:block;font-size:1.4rem;font-variant-numeric:tabular-nums}.kpi span{color:var(--muted);font-size:.85rem}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:0 8px;border-radius:10px;color:#fff;font-size:.8rem}.detected{background:var(--det)}.partial{background:var(--par);color:#111}.missed{background:var(--mis)}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:var(--det)}
+svg text{fill:var(--fg);font-size:11px}.legend span{margin-right:12px;font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<p><a href="../">&larr; GAUNTLET docs</a></p>
+<h1>Coverage explorer</h1>
+<p class="sub">Static view of the committed benchmark: 96 OTRF Security-Datasets recordings replayed through three rule sets. Nothing is executed; the page only reads <code>results/*.json</code>.</p>
+<div class="controls">
+  <label>Rule set <select id="rs"><option value="sigma-core">SigmaHQ core</option><option value="sigma-all">SigmaHQ all</option><option value="legacy">v0.1 baseline</option></select></label>
+  <label>Filter <input id="q" placeholder="T1059, discovery, missed..."></label>
+</div>
+<div class="kpis" id="kpis"></div>
+<h2>Per-tactic coverage</h2>
+<div class="wrap"><table id="tactics"></table></div>
+<h2>Techniques</h2>
+<div class="wrap"><table id="techs"></table></div>
+<h2>Prioritization: recall of held-out actor techniques vs emulations</h2>
+<div class="controls"><label>Profile <select id="prof"></select></label></div>
+<div class="legend" id="legend"></div>
+<svg id="curve" viewBox="0 0 640 300" width="100%" role="img" aria-label="Recall curves per ordering strategy"></svg>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const pct = x => (100 * x).toFixed(1) + "%";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const COLORS = {cti:"#1565c0",relevance:"#6a1b9a",prevalence:"#00838f",breadth:"#ef6c00",random:"#888"};
+let summary = null; const cov = {};
+async function load(name){ if(!cov[name]) cov[name] = await (await fetch(`data/coverage-${name}.json`)).json(); return cov[name]; }
+async function render(){
+  const d = await load($("rs").value), q = $("q").value.trim().toLowerCase();
+  const ci = d.ci95 || {};
+  const f = c => c ? ` <span>[${pct(c[0])}, ${pct(c[1])}]</span>` : "";
+  $("kpis").innerHTML = [
+    ["Technique coverage", pct(d.technique_coverage) , f(ci.technique_coverage)],
+    ["Recordings detected", pct(d.dataset_recall), f(ci.dataset_recall)],
+    ["Rules", d.rules, ""],
+    ["Off-target alerts / 10k events", d.off_target_alerts_per_10k_events, ""]].map(
+    ([k,v,c]) => `<div class="kpi"><b>${v}</b><span>${k}</span>${c}</div>`).join("");
+  $("tactics").innerHTML = "<tr><th>Tactic</th><th>Covered</th><th></th></tr>" + Object.entries(d.by_tactic).map(([t,v]) =>
+    `<tr><td>${esc(t)}</td><td class="num">${v.covered}/${v.total}</td><td><div class="bar"><i style="width:${100*v.covered/v.total}%"></i></div></td></tr>`).join("");
+  const rows = d.results.filter(r => !q || [r.technique,r.name,r.tactic,r.outcome,...r.rules].join(" ").toLowerCase().includes(q));
+  $("techs").innerHTML = "<tr><th>Technique</th><th>Tactic</th><th>Result</th><th>Recordings</th><th>Detections</th></tr>" + rows.map(r =>
+    `<tr><td><a href="https://attack.mitre.org/techniques/${r.technique.replace(".","/")}/">${esc(r.technique)}</a> ${esc(r.name)}</td><td>${esc(r.tactic)}</td>`+
+    `<td><span class="pill ${r.outcome}">${r.outcome}</span></td><td class="num">${r.detected}/${r.datasets}</td><td>${r.rules.map(esc).join("; ")||"-"}</td></tr>`).join("");
+}
+function curve(){
+  const p = summary.prioritization[$("prof").value], W=640,H=300,L=40,B=30,T=10,R=10;
+  const cs = p.mean_curves, n = Math.max(...Object.values(cs).map(c=>c.length));
+  const x = i => L + (W-L-R)*i/(n-1), y = v => H-B - (H-B-T)*v;
+  let s = `<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="currentColor" opacity=".3"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="currentColor" opacity=".3"/>`;
+  for (const v of [0,.25,.5,.75,1]) s += `<text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  for (const i of [0,24,49,74,99]) if (i<n) s += `<text x="${x(i)}" y="${H-B+16}" text-anchor="middle">${i+1}</text>`;
+  s += `<text x="${(W+L)/2}" y="${H-2}" text-anchor="middle">techniques emulated</text>`;
+  for (const [k,c] of Object.entries(cs)) s += `<polyline fill="none" stroke="${COLORS[k]||"#999"}" stroke-width="2" points="${c.map((v,i)=>x(i)+","+y(v)).join(" ")}"/>`;
+  $("curve").innerHTML = s;
+  $("legend").innerHTML = Object.keys(cs).map(k=>`<span style="color:${COLORS[k]}">&#9632;</span> ${k}`).join(" ") + ` &middot; ${p.groups_evaluated} held-out groups`;
+}
+(async () => {
+  summary = await (await fetch("data/results.json")).json();
+  $("prof").innerHTML = Object.keys(summary.prioritization).map(p=>`<option>${p}</option>`).join("");
+  $("rs").onchange = render; $("q").oninput = render; $("prof").onchange = curve;
+  render(); curve();
+})();
+</script>
+</body>
+</html>
