@@ -102,6 +102,8 @@ CATEGORY_TARGETS: dict[str, list[tuple[str, tuple[int, ...]]]] = {
 }
 
 # Sysmon-style field names -> Security 4688 names (pySigma windows audit mapping)
+WINDOWS_PREFIXES = ("rules/windows/", "rules-emerging-threats/")
+
 SECURITY_4688_MAP = {
     "image": "newprocessname",
     "parentimage": "parentprocessname",
@@ -203,7 +205,12 @@ Matcher = Callable[[EventView], bool]
 
 
 def _string_matcher(fname: str, values: list[str], mode: str, cased: bool, all_: bool) -> Matcher:
-    """mode in {'eq','contains','startswith','endswith'}; values may contain wildcards."""
+    """mode in {'eq','contains','startswith','endswith'}; values may contain wildcards.
+
+    Plain values are matched with C-level string ops (set lookup, tuple
+    startswith/endswith, substring loop for contains) - this is the hot
+    path of the whole replay.
+    """
     plain: list[str] = []
     regs: list[re.Pattern[str]] = []
     for v in values:
@@ -218,31 +225,63 @@ def _string_matcher(fname: str, values: list[str], mode: str, cased: bool, all_:
             v = _unescape(v)
             plain.append(v if cased else v.lower())
 
-    def one(val: str, p: str) -> bool:
-        if mode == "eq":
-            return val == p
-        if mode == "contains":
-            return p in val
-        if mode == "startswith":
-            return val.startswith(p)
-        return val.endswith(p)
+    def value(ev: EventView) -> str | None:
+        if cased:
+            raw = ev.get(fname)
+            return None if raw is None else str(raw)
+        return ev.low(fname)
 
-    tests: list[Callable[[str, str], bool]] = []
-    for p in plain:
-        tests.append(lambda lv, rv, p=p: one(rv if cased else lv, p))
-    for r in regs:
-        tests.append(lambda lv, rv, r=r: r.match(rv) is not None)
+    if all_:
+        def m_all(ev: EventView) -> bool:
+            val = value(ev)
+            if val is None:
+                return False
+            if mode == "eq":
+                ok = all(val == p for p in plain)
+            elif mode == "contains":
+                ok = all(p in val for p in plain)
+            elif mode == "startswith":
+                ok = all(val.startswith(p) for p in plain)
+            else:
+                ok = all(val.endswith(p) for p in plain)
+            return ok and all(r.match(val) is not None for r in regs)
+        return m_all
 
-    def m(ev: EventView) -> bool:
-        lv = ev.low(fname)
-        if lv is None:
+    if mode == "eq":
+        pset = frozenset(plain)
+        test = pset.__contains__
+    elif mode == "startswith":
+        ptup = tuple(plain)
+        test = lambda val: val.startswith(ptup)
+    elif mode == "endswith":
+        ptup = tuple(plain)
+        test = lambda val: val.endswith(ptup)
+    elif len(plain) == 1:
+        p0 = plain[0]
+        test = lambda val: p0 in val
+    else:
+        ptup = tuple(plain)
+
+        def test(val: str) -> bool:
+            for p in ptup:
+                if p in val:
+                    return True
             return False
-        rv = str(ev.get(fname))
-        if all_:
-            return all(t(lv, rv) for t in tests)
-        return any(t(lv, rv) for t in tests)
 
-    return m
+    if not plain:
+        test = lambda val: False
+    if not regs:
+        def m(ev: EventView) -> bool:
+            val = value(ev)
+            return val is not None and test(val)
+        return m
+
+    def m_re(ev: EventView) -> bool:
+        val = value(ev)
+        if val is None:
+            return False
+        return test(val) or any(r.match(val) is not None for r in regs)
+    return m_re
 
 
 def _keyword_matcher(values: list[str], all_: bool) -> Matcher:
@@ -350,7 +389,7 @@ def _field_matcher(key: str, raw_values: Any) -> Matcher:
 
 
 def _map_matcher(d: dict[str, Any]) -> Matcher:
-    parts = []
+    parts: list[Matcher] = []
     for k, v in d.items():
         k = str(k)
         if k.split("|")[0] == "" or k.startswith("|"):
@@ -359,7 +398,15 @@ def _map_matcher(d: dict[str, Any]) -> Matcher:
                                           "all" in mods))
         else:
             parts.append(_field_matcher(k, v))
-    return lambda ev: all(p(ev) for p in parts)
+    if len(parts) == 1:
+        return parts[0]
+
+    def m(ev: EventView) -> bool:
+        for p in parts:
+            if not p(ev):
+                return False
+        return True
+    return m
 
 
 def compile_search(item: Any) -> Matcher:
@@ -574,7 +621,7 @@ def load_rules_from_texts(items: Iterable[tuple[str, str]]) -> RuleSet:
     return RuleSet(rules, unsupported)
 
 
-def load_rules(source: str | Path, subdir_prefix: str = "") -> RuleSet:
+def load_rules(source: str | Path, subdir_prefix: str | tuple[str, ...] = "") -> RuleSet:
     """Load Sigma rules from a directory of .yml files or a SigmaHQ release zip.
 
     ``subdir_prefix`` restricts to paths under e.g. ``rules/windows``.
