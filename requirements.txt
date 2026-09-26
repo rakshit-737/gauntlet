@@ -1,3 +1,7 @@
-# Runtime: standard library only.
-# Dev/test:
+# Runtime
+pyyaml>=6
+# Optional: figures in `gauntlet bench` (skipped gracefully if absent)
+matplotlib>=3.8
+# Dev/test
 pytest>=7
+ruff>=0.5
