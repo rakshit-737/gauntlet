@@ -3,9 +3,19 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ruff==0.8.4"
+      - run: ruff check .
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python: ["3.10", "3.12", "3.13"]
     steps:
@@ -14,5 +24,12 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -r requirements.txt
+      # real-data tests auto-skip: datasets are never downloaded in CI
       - run: python -m pytest -q
-      - run: python -m gauntlet run --profile ransomware --json report.json
+      - name: smoke - CLI on shipped ATT&CK knowledge base
+        run: |
+          python -m gauntlet profiles
+          python -m gauntlet plan --profile ransomware --top 10
+          python -m gauntlet predict --observed T1566.001,T1059.001 -k 5
+          python -m gauntlet sim --profile ransomware --json report.json
+          python -m gauntlet sim --profile ransomware --baseline report.json
