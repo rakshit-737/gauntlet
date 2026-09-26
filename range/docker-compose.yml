@@ -1,0 +1,18 @@
+# OPTIONAL, NOT USED BY TESTS. Sketch of the future isolated range (Grade B/C TODO).
+# Hard rules: internal-only network (no egress), no host mounts, no privileged containers.
+services:
+  ws01:
+    image: alpine:3.20
+    command: ["sleep", "infinity"]
+    networks: [range]
+    read_only: true
+    cap_drop: [ALL]
+  collector:
+    image: alpine:3.20
+    command: ["sleep", "infinity"]
+    networks: [range]
+    read_only: true
+    cap_drop: [ALL]
+networks:
+  range:
+    internal: true   # no route to the internet or host LAN
