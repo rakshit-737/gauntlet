@@ -137,3 +137,9 @@ tags: [attack.t1059]
     rs = sigma.load_rules_from_texts([("a.yml", good), ("b.yml", bad), ("c.yml", ":\n  - [")])
     assert [r.title for r in rs.rules] == ["ok"]
     assert set(rs.unsupported) == {"b.yml", "c.yml"}
+
+
+def test_rule_cites_references():
+    r = rule({"sel": {"a": 1}, "condition": "sel"},
+             references=["https://securitydatasets.com/notebooks/x.html"], description="d")
+    assert r.cites("securitydatasets|mordor") and not r.cites("unrelated")

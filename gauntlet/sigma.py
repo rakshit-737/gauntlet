@@ -526,6 +526,13 @@ class SigmaRule:
     targets: tuple[Target, ...]
     match: Matcher = field(repr=False)
     path: str = ""
+    references: tuple[str, ...] = ()
+    description: str = ""
+
+    def cites(self, pattern: str) -> bool:
+        """True if the rule's references/description match ``pattern`` (case-insensitive)."""
+        rx = re.compile(pattern, re.I)
+        return any(rx.search(x) for x in (*self.references, self.description))
 
     def applies(self, channel: str, event_id: int | None) -> bool:
         return any(c == channel and (e is None or e == event_id) for c, e in self.targets)
@@ -572,7 +579,8 @@ def parse_rule(doc: dict[str, Any], path: str = "") -> SigmaRule:
                     and not re.match(r"attack\.[gs]\d{4}", t, re.I))
     return SigmaRule(str(doc.get("id", path)), str(doc.get("title", "")),
                      str(doc.get("level", "")).lower(), str(doc.get("status", "")).lower(),
-                     techs, tactics, dict(doc.get("logsource") or {}), targets, match, path)
+                     techs, tactics, dict(doc.get("logsource") or {}), targets, match, path,
+                     tuple(str(x) for x in doc.get("references") or []), str(doc.get("description") or ""))
 
 
 @dataclass
