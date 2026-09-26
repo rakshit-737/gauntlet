@@ -4,11 +4,13 @@ ATT&CK Enterprise v19.2 - SigmaHQ r2026-07-01 - 96 OTRF Security-Datasets Window
 
 ## Detection coverage on real recorded attack telemetry
 
+Brackets are 95% Wilson intervals (54 techniques / 96 recordings are small samples).
+
 | Rule set | Rules | Technique coverage | Exact-ID coverage | Coverage w/o OTRF-citing rules | Recordings detected | Off-target rules / recording | Off-target alerts / 10k events |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| legacy | 6 | 5.6% | 3.7% | n/a | 3.1% | 0.15 | 0.23 |
-| sigma-core | 1365 | 66.7% | 57.4% | 61.1% (-19 rules) | 53.1% | 1.55 | 11.18 |
-| sigma-all | 2519 | 81.5% | 66.7% | 77.8% (-41 rules) | 69.8% | 3.49 | 53.68 |
+| legacy | 6 | 5.6% [1.9, 15.1] | 3.7% | n/a | 3.1% [1.1, 8.8] | 0.15 | 0.23 |
+| sigma-core | 1365 | 66.7% [53.4, 77.8] | 57.4% | 61.1% (-19 rules) | 53.1% [43.2, 62.8] | 1.55 | 11.18 |
+| sigma-all | 2519 | 81.5% [69.2, 89.6] | 66.7% | 77.8% (-41 rules) | 69.8% [60.0, 78.1] | 3.49 | 53.68 |
 
 ## Threat-weighted coverage per CTI profile
 
@@ -89,6 +91,23 @@ Recall of a held-out actor's techniques after k emulations, universe = Windows t
 | cloud (n=4) | breadth | 0.062 | 0.129 | 0.265 | 94.5 | 196.2 | 0.577 |
 | cloud (n=4) | random | 0.040 | 0.095 | 0.184 | 130.8 | 210.7 | 0.502 |
 
+Paired comparison over held-out groups (mean difference, 95% bootstrap CI; negative steps = CTI needs fewer emulations):
+
+| Profile | Comparison | Δ steps to 80% | Δ AUC |
+|---|---|---:|---:|
+| ransomware | cti minus breadth | -75.5 [-85.0, -65.8] | +0.150 [+0.136, +0.162] |
+| ransomware | cti minus prevalence | -8.0 [-12.2, -3.9] | +0.008 [+0.003, +0.013] |
+| ransomware | cti minus random | -93.0 [-97.8, -88.4] | +0.215 [+0.205, +0.226] |
+| espionage | cti minus breadth | -93.6 [-102.2, -85.0] | +0.181 [+0.165, +0.199] |
+| espionage | cti minus prevalence | +0.0 [-1.0, +0.9] | +0.000 [-0.001, +0.001] |
+| espionage | cti minus random | -108.0 [-115.8, -100.6] | +0.258 [+0.240, +0.276] |
+| financial | cti minus breadth | -78.2 [-88.3, -68.4] | +0.158 [+0.143, +0.174] |
+| financial | cti minus prevalence | -0.8 [-3.6, +1.9] | -0.000 [-0.002, +0.002] |
+| financial | cti minus random | -88.1 [-93.8, -82.0] | +0.224 [+0.212, +0.236] |
+| cloud | cti minus breadth | -49.0 [-74.5, -23.0] | +0.114 [+0.062, +0.167] |
+| cloud | cti minus prevalence | +24.2 [+9.0, +44.8] | -0.036 [-0.058, -0.018] |
+| cloud | cti minus random | -63.4 [-94.8, -25.3] | +0.190 [+0.134, +0.245] |
+
 ## Next-technique prediction (co-occurrence vs popularity, leave-one-group-out)
 
 | Level | Model | recall@5 | recall@10 | recall@20 | MRR |
@@ -97,6 +116,11 @@ Recall of a held-out actor's techniques after k emulations, universe = Windows t
 | sub_technique_level (n=165) | popularity | 0.115 | 0.191 | 0.311 | 0.865 |
 | technique_level (n=168) | cooccurrence | 0.172 | 0.311 | 0.495 | 0.909 |
 | technique_level (n=168) | popularity | 0.168 | 0.278 | 0.456 | 0.926 |
+
+| Level | co-occurrence − popularity recall@10 (95% CI) | recall@10 mean ± sd over 5 hide-split seeds |
+|---|---:|---|
+| sub_technique_level | +0.044 [+0.026, +0.064] | cooccurrence 0.237 ± 0.003; popularity 0.194 ± 0.002 |
+| technique_level | +0.034 [+0.021, +0.048] | cooccurrence 0.311 ± 0.005; popularity 0.277 ± 0.002 |
 
 ## Sigma evaluator support
 

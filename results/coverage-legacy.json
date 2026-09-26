@@ -542,5 +542,15 @@
   }
  ],
  "exact_id_technique_coverage": 0.037,
- "seconds": 0.0
+ "seconds": 0.1,
+ "ci95": {
+  "technique_coverage": [
+   0.0191,
+   0.1511
+  ],
+  "dataset_recall": [
+   0.0107,
+   0.0879
+  ]
+ }
 }

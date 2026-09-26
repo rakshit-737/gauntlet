@@ -658,7 +658,17 @@
   }
  ],
  "exact_id_technique_coverage": 0.5741,
- "seconds": 3.4,
+ "seconds": 12.5,
+ "ci95": {
+  "technique_coverage": [
+   0.5336,
+   0.7776
+  ],
+  "dataset_recall": [
+   0.4322,
+   0.6279
+  ]
+ },
  "leakage_controlled": {
   "rules_removed": 19,
   "technique_coverage": 0.6111,
