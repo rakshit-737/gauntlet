@@ -97,3 +97,29 @@ def run(rules: list[Rule], events: list[Event]) -> list[Alert]:
             hits = [e for e in hits if counts[e.fields.get(key)] >= th["count"]]
         alerts.extend(Alert(rule.id, e) for e in hits)
     return alerts
+
+
+_LEGACY_CHANNELS = {"sysmon": "microsoft-windows-sysmon/operational", "security": "security"}
+
+
+def legacy_as_sigma(rule: Rule):
+    """Adapt a legacy JSON rule so it can run on real recorded telemetry.
+
+    Only rules on log sources that exist in Windows recordings (sysmon, security)
+    and without thresholds are adapted; others return ``None``.
+    """
+    from .sigma import SigmaRule
+
+    ch = _LEGACY_CHANNELS.get(rule.source)
+    if ch is None or getattr(rule, "threshold", None):
+        return None
+
+    def match(ev) -> bool:  # ev is a sigma.EventView (case-insensitive .get)
+        if not _match_block(ev, rule.selection):
+            return False
+        return not (rule.condition == "selection and not filter" and rule.filter
+                    and _match_block(ev, rule.filter))
+
+    return SigmaRule(rule.id, rule.title, "high", "legacy", rule.techniques, (),
+                     {"product": "windows", "service": rule.source}, ((ch, None),), match,
+                     f"rules/{rule.id}.json")
