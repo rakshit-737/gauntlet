@@ -5,3 +5,4 @@ __pycache__/
 report*.json
 /data/
 results/cache/
+layer.json
