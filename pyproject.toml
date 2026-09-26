@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gauntlet"
+version = "0.1.0"
+description = "Threat-informed purple-team range with detection-coverage scoring (simulation MVP)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+gauntlet = "gauntlet.cli:main"
+
+[tool.setuptools]
+packages = ["gauntlet"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
