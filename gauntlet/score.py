@@ -4,8 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from .models import (Alert, CoverageReport, EmulationStep, Event, Outcome, Range,
-                     RankedTechnique, TechniqueResult)
+from .models import Alert, CoverageReport, EmulationStep, Event, Outcome, Range, RankedTechnique, TechniqueResult
 
 
 def score(profile: str, ranked: list[RankedTechnique], plan: list[EmulationStep],
