@@ -37,6 +37,8 @@ TECHS = [("T1059", "Command and Scripting Interpreter", "execution"),
 def mini_bundle() -> dict:
     objs = [_ap(*t) for t in TECHS]
     objs.append({**_ap("T9999", "Old", "impact"), "revoked": True})
+    objs.append({"type": "relationship", "relationship_type": "revoked-by", "id": "relationship--rv",
+                 "source_ref": "attack-pattern--T9999", "target_ref": "attack-pattern--T1490"})
     objs += [
         _grp("G0001", "RansomA", "A financially motivated ransomware group."),
         _grp("G0002", "RansomB", "Deploys ransomware against hospitals."),

@@ -99,10 +99,20 @@ class CoverageSummary:
         }
 
 
+def _canon(kb: KnowledgeBase | None):
+    if kb is None:
+        return lambda ids: tuple(ids)
+    return lambda ids: tuple(sorted({kb.canonical(t) for t in ids}))
+
+
 def score(ruleset: str, results: Sequence[ReplayResult], rules: dict[str, SigmaRule],
           kb: KnowledgeBase | None = None, drop_channels: Iterable[str] = (),
           exact: bool = False) -> CoverageSummary:
+    """Score replay results. With ``kb``, revoked ATT&CK ids in dataset labels and rule
+    tags (e.g. T1086 -> T1059.001) are mapped to their current replacement first."""
     drop = list(drop_channels)
+    canon = _canon(kb)
+    rtech = {r: canon(rule.techniques) for r, rule in rules.items()}
     per_t: dict[str, TechniqueCoverage] = {}
     det = anyalert = 0
     off_rules = 0
@@ -110,20 +120,21 @@ def score(ruleset: str, results: Sequence[ReplayResult], rules: dict[str, SigmaR
     events = 0
     for res in results:
         events += res.n_events
+        dtech = canon(res.techniques)
         fired = {r for r in res.fired(drop) if r in rules}
-        on = {r for r in fired if on_target(rules[r].techniques, res.techniques, exact)}
+        on = {r for r in fired if on_target(rtech[r], dtech, exact)}
         off = fired - on
         off_rules += len(off)
         off_alerts += sum(n for r in off for c, n in res.hits[r].items() if c not in drop)
         det += bool(on)
         anyalert += bool(fired)
-        for t in res.techniques:
+        for t in dtech:
             tc = per_t.get(t)
             if tc is None:
                 tc = per_t[t] = TechniqueCoverage(
                     t, kb.name_of(t) if kb else t, kb.tactic_of(t) if kb else "unknown", 0, 0)
             tc.datasets += 1
-            hit = {r for r in on if on_target(rules[r].techniques, [t], exact)}
+            hit = {r for r in on if on_target(rtech[r], [t], exact)}
             tc.detected += bool(hit)
             tc.rules = sorted(set(tc.rules) | {rules[r].title or r for r in hit})
     n = max(len(results), 1)
@@ -133,14 +144,18 @@ def score(ruleset: str, results: Sequence[ReplayResult], rules: dict[str, SigmaR
 
 
 def greedy_rule_selection(results: Sequence[ReplayResult], rules: dict[str, SigmaRule],
-                          weights: dict[str, float] | None = None, top: int = 10) -> list[dict[str, Any]]:
+                          weights: dict[str, float] | None = None, top: int = 10,
+                          kb: KnowledgeBase | None = None) -> list[dict[str, Any]]:
     """'Cheapest wins': the few rules that buy the most (weighted) technique coverage."""
+    canon = _canon(kb)
+    rtech = {r: canon(rule.techniques) for r, rule in rules.items()}
     covers: dict[str, set[str]] = defaultdict(set)
     for res in results:
+        dtech = canon(res.techniques)
         for r in res.fired():
             if r in rules:
-                for t in res.techniques:
-                    if on_target(rules[r].techniques, [t]):
+                for t in dtech:
+                    if on_target(rtech[r], [t]):
                         covers[r].add(t)
 
     def w(t: str) -> float:
@@ -148,7 +163,7 @@ def greedy_rule_selection(results: Sequence[ReplayResult], rules: dict[str, Sigm
             return 1.0
         return weights.get(t, weights.get(parent(t), 0.0)) or 1e-6
 
-    total = sum(w(t) for t in {t for r in results for t in r.techniques})
+    total = sum(w(t) for t in {t for r in results for t in canon(r.techniques)})
     got: set[str] = set()
     out = []
     for _ in range(top):
@@ -166,13 +181,13 @@ def greedy_rule_selection(results: Sequence[ReplayResult], rules: dict[str, Sigm
 
 
 def channel_ablation(results: Sequence[ReplayResult], rules: dict[str, SigmaRule],
-                     channels: Iterable[str]) -> list[dict[str, Any]]:
+                     channels: Iterable[str], kb: KnowledgeBase | None = None) -> list[dict[str, Any]]:
     """Techniques lost if a telemetry channel were not collected (value of each log source)."""
-    base = score("base", results, rules)
+    base = score("base", results, rules, kb)
     base_cov = {t.technique for t in base.techniques if t.detected}
     out = []
     for ch in channels:
-        s = score(f"-{ch}", results, rules, drop_channels=[ch])
+        s = score(f"-{ch}", results, rules, kb, drop_channels=[ch])
         lost = base_cov - {t.technique for t in s.techniques if t.detected}
         out.append({"channel": ch, "techniques_lost": len(lost), "lost": sorted(lost),
                     "coverage_without": round(s.technique_coverage, 4)})

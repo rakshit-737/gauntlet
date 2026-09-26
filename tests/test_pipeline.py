@@ -20,6 +20,14 @@ def test_parse_stix_filters_revoked_and_rolls_up_software(mini_kb):
     assert mini_kb.tactic_of("T1059.001") == "execution"
 
 
+def test_revoked_ids_map_to_replacement(mini_kb):
+    assert mini_kb.revoked == {"T9999": "T1490"}
+    assert mini_kb.canonical("T9999") == "T1490"
+    assert mini_kb.canonical("T9999.001") == "T1490"      # sub of a revoked parent
+    assert mini_kb.canonical("T1059.001") == "T1059.001"
+    assert load_kb().canonical("T1086") == "T1059.001"      # real ATT&CK: PowerShell re-id
+
+
 def test_prevalence_counts_parent_rollup(mini_kb):
     prev = mini_kb.prevalence()
     assert prev["T1059.001"] == pytest.approx(1.0)

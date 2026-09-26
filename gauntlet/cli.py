@@ -153,10 +153,10 @@ def cmd_replay(a) -> int:
         return 1
     kb = _kb(a)
     datasets = [d for d in mordor.load_catalog(root) if d.available and d.techniques]
-    recorded = sorted({t for d in datasets for t in d.techniques})
+    recorded = sorted({kb.canonical(t) for d in datasets for t in d.techniques})
     groups, rel, ranked = _ranked(a, kb, recorded)
     order = {r.technique for r in ranked}
-    chosen = [d for d in datasets if set(d.techniques) & order]
+    chosen = [d for d in datasets if {kb.canonical(t) for t in d.techniques} & order]
     if a.ruleset == "legacy":
         spec = f"legacy:{a.rules}"
     elif a.ruleset in ("sigma-core", "sigma-all"):

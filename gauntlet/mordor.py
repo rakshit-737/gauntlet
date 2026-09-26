@@ -47,7 +47,7 @@ def _techniques(meta: dict[str, Any]) -> tuple[str, ...]:
     out = []
     for m in meta.get("attack_mappings") or []:
         t = str(m.get("technique") or "").strip().upper()
-        if not t.startswith("T"):
+        if not t.startswith("T") or not t[1:].isdigit() or t == "T0000":  # T0000 = unmapped placeholder
             continue
         sub = m.get("sub-technique")
         if sub not in (None, "", "null"):
