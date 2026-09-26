@@ -2,6 +2,7 @@
 
 [![ci](https://github.com/rakshit-737/gauntlet/actions/workflows/ci.yml/badge.svg)](https://github.com/rakshit-737/gauntlet/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)
+[![docs](https://github.com/rakshit-737/gauntlet/actions/workflows/docs.yml/badge.svg)](https://rakshit-737.github.io/gauntlet/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v19.2-red)
 ![Sigma](https://img.shields.io/badge/SigmaHQ-r2026--07--01-orange)
@@ -10,7 +11,10 @@
 
 Purple-teaming is usually manual and unprioritized. GAUNTLET closes the loop
 **CTI → prioritized emulation plan → telemetry → detections → coverage → ranked gaps → regression gate**,
-using only public data:
+using only public data.
+
+**Docs:** <https://rakshit-737.github.io/gauntlet/> (with an interactive [coverage explorer](https://rakshit-737.github.io/gauntlet/demo/)). **Image:** `ghcr.io/rakshit-737/gauntlet`.
+
 
 | Stage | Real data used |
 |---|---|
@@ -28,11 +32,13 @@ Full tables: [`results/RESULTS.md`](results/RESULTS.md). Reproduce with `python 
 
 **Detection coverage on 96 OTRF recordings covering 54 ATT&CK techniques**
 
+Brackets: 95% Wilson intervals. With only 54 techniques and 96 recordings, the intervals are wide (about ±12 points).
+
 | Rule set | Rules | Technique coverage | Exact-ID coverage | w/o rules citing OTRF data | Recordings detected | Off-target alerts / 10k events |
 |---|---:|---:|---:|---:|---:|---:|
-| Baseline: GAUNTLET v0.1 hand-written rules | 6 | 5.6% | 3.7% | n/a | 3.1% | 0.23 |
-| SigmaHQ *core* (stable/test, high/critical) | 1,365 | **66.7%** | 57.4% | 61.1% | 53.1% | 11.2 |
-| SigmaHQ *all* Windows rules | 2,519 | **81.5%** | 66.7% | 77.8% | 69.8% | 53.7 |
+| Baseline: GAUNTLET v0.1 hand-written rules | 6 | 5.6% [1.9, 15.1] | 3.7% | n/a | 3.1% [1.1, 8.8] | 0.23 |
+| SigmaHQ *core* (stable/test, high/critical) | 1,365 | **66.7%** [53.4, 77.8] | 57.4% | 61.1% | 53.1% [43.2, 62.8] | 11.2 |
+| SigmaHQ *all* Windows rules | 2,519 | **81.5%** [69.2, 89.6] | 66.7% | 77.8% | 69.8% [60.0, 78.1] | 53.7 |
 
 The baseline is 6 of the 7 v0.1 rules in `rules/`. The password-spray rule is a count threshold with no Sigma equivalent here, so it is not replayed.
 
@@ -54,9 +60,10 @@ Leave-one-group-out test: rank the 266 ART-emulatable techniques using every *ot
 <p align="center"><img src="results/prioritization_ransomware.png" width="620" alt="Recall of held-out ransomware actor techniques versus number of techniques emulated, per ordering strategy"></p>
 
 The answer is **yes**. CTI ordering needs 39-48% fewer emulations than breadth-first to reach 80% of a held-out actor's techniques on the three larger profiles (25% on the 4-group cloud profile).
-Profile-specific relevance adds little on top of global ATT&CK prevalence: `prevalence` alone ties `cti` on espionage and financial, and beats it on cloud, where only 4 groups inform the relevance term. Most of the value comes from "what is common everywhere", not from actor-specific tailoring.
+Paired over the same held-out groups, CTI minus breadth-first is -75.5 steps [95% CI -85.0, -65.8] for ransomware, -93.6 [-102.2, -85.0] for espionage, -78.2 [-88.3, -68.4] for financial and -49.0 [-74.5, -23.0] for cloud.
+Profile-specific relevance adds little on top of global ATT&CK prevalence. For ransomware CTI beats `prevalence` alone by 8.0 steps [3.9, 12.2]. On espionage and financial the difference is indistinguishable from zero (+0.0 [-1.0, +0.9] and -0.8 [-3.6, +1.9]). On cloud `prevalence` is better by 24.2 steps [9.0, 44.8], where only 4 groups inform the relevance term. Most of the value comes from "what is common everywhere", not from actor-specific tailoring.
 
-**Next-technique prediction.** An item-item co-occurrence model trained on ATT&CK group technique sets (leave-one-group-out, half of each group hidden) reaches recall@10 of 0.235, against 0.191 for a popularity baseline at sub-technique level. At technique level it is 0.311 against 0.278.
+**Next-technique prediction.** An item-item co-occurrence model trained on ATT&CK group technique sets (leave-one-group-out, half of each group hidden) reaches recall@10 of 0.235, against 0.191 for a popularity baseline at sub-technique level. At technique level it is 0.311 against 0.278. The paired gains are +0.044 [95% CI +0.026, +0.064] and +0.034 [+0.021, +0.048]. Over 5 hide-split seeds the sub-technique recall@10 is 0.237 ± 0.003 against 0.194 ± 0.002.
 
 <p align="center"><img src="results/tactic_coverage.png" width="620" alt="Per-tactic detection coverage for three rule sets"></p>
 
@@ -64,23 +71,23 @@ Profile-specific relevance adds little on top of global ATT&CK prevalence: `prev
 
 ```mermaid
 flowchart LR
-  subgraph CTI[CTI - MITRE ATT&CK v19.2]
-    KB[attack.py<br/>STIX to KB, revoked-id map]
+  subgraph CTI["CTI - MITRE ATT&CK v19.2"]
+    KB["attack.py<br/>STIX to KB, revoked-id map"]
   end
-  TP[Threat profile<br/>real ATT&CK groups] --> PR
-  KB --> PR[prioritize.py<br/>relevance x prevalence<br/>5 strategies + LOGO eval]
-  KB --> PRED[predict.py<br/>co-occurrence next-technique]
-  PR --> PLAN[atomics.py<br/>dry-run ART manifest]
-  PR --> SEL[recordings for<br/>prioritized techniques]
-  OTRF[(OTRF Security-Datasets<br/>recorded Windows telemetry)] --> SEL
-  SEL --> RP[replay.py<br/>channel/EventID-indexed replay<br/>process pool + cache]
-  SIG[(SigmaHQ rules)] --> SE[sigma.py<br/>Sigma evaluator]
+  TP["Threat profile<br/>real ATT&CK groups"] --> PR
+  KB --> PR["prioritize.py<br/>relevance x prevalence<br/>5 strategies + LOGO eval"]
+  KB --> PRED["predict.py<br/>co-occurrence next-technique"]
+  PR --> PLAN["atomics.py<br/>dry-run ART manifest"]
+  PR --> SEL["recordings for<br/>prioritized techniques"]
+  OTRF[("OTRF Security-Datasets<br/>recorded Windows telemetry")] --> SEL
+  SEL --> RP["replay.py<br/>channel/EventID-indexed replay<br/>process pool + cache"]
+  SIG[("SigmaHQ rules")] --> SE["sigma.py<br/>Sigma evaluator"]
   SE --> RP
-  RP --> COV[coverage.py<br/>coverage, off-target burden,<br/>cheapest wins, ablation]
-  COV --> NAV[ATT&CK Navigator layer]
-  COV --> REP[results/ + figures]
-  COV --> REG[regression gate<br/>--baseline, exit 2]
-  SIM[offline simulation<br/>cti/plans/range_sim] -.-> REG
+  RP --> COV["coverage.py<br/>coverage, off-target burden,<br/>cheapest wins, ablation"]
+  COV --> NAV["ATT&CK Navigator layer"]
+  COV --> REP["results/ + figures"]
+  COV --> REG["regression gate<br/>--baseline, exit 2"]
+  SIM["offline simulation<br/>cti/plans/range_sim"] -.-> REG
 ```
 
 | Module | Purpose |
@@ -158,7 +165,7 @@ Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No
 
 - Every source is pinned (git commit for OTRF and Atomic Red Team, release tag for SigmaHQ, versioned file name for ATT&CK) and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256).
 - `python -m gauntlet bench` is deterministic. Random baselines use fixed seeds, 30 per held-out group. Replay results are cached under `$GAUNTLET_DATA_DIR/cache`. A cold run takes about 25 minutes on a 16-core laptop; a cached re-run takes about a minute.
-- CI (`.github/workflows/ci.yml`) runs ruff and the 76-test suite on Python 3.10/3.12/3.13 without downloads; the 2 `@pytest.mark.realdata` tests are skipped there and pass locally once the data is present.
+- CI (`.github/workflows/ci.yml`) runs ruff and the 78 offline tests on Python 3.10/3.12/3.13 without downloads; the 2 `@pytest.mark.realdata` tests are skipped there and pass locally once the data is present.
 
 ## Prior art and how this differs
 
@@ -189,11 +196,13 @@ GAUNTLET does not reinvent emulation. Its contribution is the reproducible close
 - [x] ATT&CK Navigator export, cheapest wins, telemetry ablation
 - [x] Research question: CTI vs breadth-first (leave-one-group-out)
 - [x] Technique co-occurrence prediction
-- [ ] Run the ART manifest in the isolated Docker/VM range and replay its Sysmon logs (the loader already accepts JSON-lines events)
-- [ ] Event-level ground truth (OTRF compound datasets with timelines)
-- [ ] ML detector (FEINT) as a fourth rule set next to Sigma
-- [ ] Red Canary Threat Detection Report weights as an alternative prevalence source
-- [ ] Sigma correlation/aggregation rules
+- [x] 95% confidence intervals and paired like-for-like comparisons for every headline number (v1.0.0)
+- [x] Docs site, static coverage explorer, container image and tagged releases (v1.0.0)
+- [ ] Run the ART manifest in the isolated Docker/VM range and replay its Sysmon logs (the loader already accepts JSON-lines events). Needs a Windows lab VM with Sysmon; executing atomics on this workstation is out of scope by design (ADR 0004)
+- [ ] Event-level ground truth (OTRF compound datasets with timelines). Needs per-event human labelling of attacker vs background activity; the public recordings are labelled at recording level only
+- [ ] ML detector (FEINT) as a fourth rule set next to Sigma. Depends on a separate project and a trained model; not in this repo
+- [ ] Red Canary Threat Detection Report weights as an alternative prevalence source. The report publishes no machine-readable, redistributable table; transcribing it by hand needs licence review
+- [ ] Sigma correlation/aggregation rules. The pinned SigmaHQ release ships no Windows correlation rules, so there is nothing to benchmark yet
 
 ## Lab-only safety note
 

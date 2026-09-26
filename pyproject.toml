@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gauntlet"
-version = "0.2.0"
+version = "1.0.0"
 description = "Threat-informed purple-team coverage scoring: ATT&CK CTI prioritization, replay of real attack telemetry, Sigma detection scoring"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6"]
