@@ -1,0 +1,23 @@
+{
+  "id": "lsass_access",
+  "title": "Suspicious access to LSASS",
+  "techniques": [
+    "T1003.001"
+  ],
+  "logsource": "sysmon",
+  "detection": {
+    "selection": {
+      "EventID": 10,
+      "TargetImage|endswith": "\\lsass.exe",
+      "GrantedAccess": [
+        "0x1010",
+        "0x1410",
+        "0x1fffff"
+      ]
+    },
+    "filter": {
+      "SourceImage|startswith": "C:\\Windows\\System32\\"
+    },
+    "condition": "selection and not filter"
+  }
+}
