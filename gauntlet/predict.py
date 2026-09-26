@@ -17,6 +17,8 @@ import statistics
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 
+from . import stats
+
 
 class CooccurrenceModel:
     def __init__(self, sets: Iterable[set[str]]):
@@ -87,5 +89,23 @@ def evaluate(sets: Sequence[set[str]], ks=(5, 10, 20), hide: float = 0.5, seed: 
                 m.setdefault(f"precision@{k}", []).append(len(set(p[:k]) & hidden) / k)
             rr = next((1 / i for i, t in enumerate(full[name], 1) if t in hidden), 0.0)
             m.setdefault("mrr", []).append(rr)
-    return {"groups_evaluated": n_eval, "hide_fraction": hide,
-            "models": {k: {m: round(statistics.fmean(v), 4) for m, v in d.items()} for k, d in res.items()}}
+    out = {"groups_evaluated": n_eval, "hide_fraction": hide, "seed": seed,
+           "models": {k: {m: round(statistics.fmean(v), 4) for m, v in d.items()} for k, d in res.items()}}
+    if n_eval:
+        out["ci95"] = {k: {m: list(stats.bootstrap_ci(d[m])) for m in ("recall@10", "mrr")} for k, d in res.items()}
+        out["paired_recall@10"] = stats.paired_bootstrap_ci(res["cooccurrence"]["recall@10"],
+                                                             res["popularity"]["recall@10"])
+    return out
+
+
+def evaluate_seeds(sets: Sequence[set[str]], seeds: Sequence[int] = range(5), **kw) -> dict:
+    """Repeat :func:`evaluate` over several hide-split seeds; report seed 0 plus mean/sd across seeds."""
+    runs = [evaluate(sets, seed=s, **kw) for s in seeds]
+    base = runs[0]
+    spread = {}
+    for m in base["models"]:
+        vals = [r["models"][m]["recall@10"] for r in runs]
+        spread[m] = {"recall@10_mean": round(statistics.fmean(vals), 4),
+                     "recall@10_sd": round(statistics.pstdev(vals), 4) if len(vals) > 1 else 0.0}
+    base["across_seeds"] = {"seeds": list(seeds), **spread}
+    return base

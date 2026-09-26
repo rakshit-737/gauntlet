@@ -20,6 +20,7 @@ import statistics
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from . import stats
 from .attack import AttackGroup, KnowledgeBase, parent
 
 PROFILE_PATTERNS: dict[str, tuple[str, str]] = {
@@ -149,7 +150,21 @@ def evaluate_logo(kb: KnowledgeBase, profile: str, universe: set[str], ks=(10, 2
                 m.setdefault("steps_to_80%", []).append(steps_to(curve, 0.8))
                 m.setdefault("auc", []).append(sum(curve) / len(curve))
     summary = {s: {k: round(statistics.fmean(v), 4) for k, v in m.items()} for s, m in per.items() if m}
+    # per-group values (random: mean over its seeds) -> bootstrap CIs over held-out groups
+    per_group: dict[str, dict[str, list[float]]] = {}
+    for s, m in per.items():
+        step = random_seeds if s == "random" else 1
+        per_group[s] = {k: [statistics.fmean(v[i:i + step]) for i in range(0, len(v), step)] for k, v in m.items()}
+    ci = {s: {k: list(stats.bootstrap_ci(v)) for k, v in m.items() if k in ("steps_to_80%", "auc", "recall@25")}
+          for s, m in per_group.items() if m}
+    paired = {}
+    if n_eval:
+        for other in ("breadth", "prevalence", "random"):
+            paired[f"cti_minus_{other}"] = {
+                k: stats.paired_bootstrap_ci(per_group["cti"][k], per_group[other][k])
+                for k in ("steps_to_80%", "auc")}
     mean_curves = {s: [round(statistics.fmean(c[i] for c in cs), 4) for i in range(min(map(len, cs)))]
                    for s, cs in curves.items() if cs}
     return {"profile": profile, "groups_in_profile": len(groups), "groups_evaluated": n_eval,
-            "universe": len(universe), "strategies": summary, "mean_curves": mean_curves}
+            "universe": len(universe), "strategies": summary, "ci95": ci, "paired": paired,
+            "mean_curves": mean_curves}
