@@ -60,8 +60,6 @@ def prioritization_curves(report: dict[str, Any], out: Path, profile: str = "ran
             continue
         xs = range(1, len(c) + 1)
         ax.plot(xs, [100 * v for v in c], color=SERIES[i], linewidth=2, label=s)
-        ax.annotate(s, (len(c), 100 * c[-1]), xytext=(4, 0), textcoords="offset points",
-                    color=INK, fontsize=8, va="center")
     ax.set_xlabel("techniques emulated (in priority order)", color=MUTED, fontsize=9)
     ax.set_ylabel("held-out actor's techniques covered (%)", color=MUTED, fontsize=9)
     ax.set_ylim(0, 100)
@@ -69,7 +67,7 @@ def prioritization_curves(report: dict[str, Any], out: Path, profile: str = "ran
                  f"(leave-one-group-out, n={d['groups_evaluated']})", color=INK, fontsize=10, loc="left")
     _style(ax)
     ax.grid(axis="y", color=GRID, linewidth=0.8)
-    ax.legend(frameon=False, fontsize=9, loc="lower right")
+    ax.legend(frameon=False, fontsize=9, loc="upper left")
     fig.tight_layout()
     p = out / f"prioritization_{profile}.png"
     fig.savefig(p)
