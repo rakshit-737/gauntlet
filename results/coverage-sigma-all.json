@@ -1,0 +1,722 @@
+{
+ "ruleset": "sigma-all",
+ "rules": 2519,
+ "datasets": 96,
+ "dataset_recall": 0.6979,
+ "datasets_any_alert": 87,
+ "technique_coverage": 0.8148,
+ "techniques": 54,
+ "events": 754299,
+ "off_target_rules_per_dataset": 3.49,
+ "off_target_alerts_per_10k_events": 53.68,
+ "by_tactic": {
+  "collection": {
+   "covered": 1,
+   "total": 1
+  },
+  "credential-access": {
+   "covered": 7,
+   "total": 9
+  },
+  "defense-impairment": {
+   "covered": 2,
+   "total": 3
+  },
+  "discovery": {
+   "covered": 2,
+   "total": 7
+  },
+  "execution": {
+   "covered": 6,
+   "total": 7
+  },
+  "lateral-movement": {
+   "covered": 5,
+   "total": 6
+  },
+  "persistence": {
+   "covered": 6,
+   "total": 6
+  },
+  "privilege-escalation": {
+   "covered": 7,
+   "total": 7
+  },
+  "stealth": {
+   "covered": 8,
+   "total": 8
+  }
+ },
+ "results": [
+  {
+   "technique": "T1003",
+   "name": "OS Credential Dumping",
+   "tactic": "credential-access",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "DPAPI Domain Backup Key Extraction"
+   ]
+  },
+  {
+   "technique": "T1003.001",
+   "name": "OS Credential Dumping: LSASS Memory",
+   "tactic": "credential-access",
+   "outcome": "detected",
+   "datasets": 5,
+   "detected": 5,
+   "rules": [
+    "HackTool - Dumpert Process Dumper Default File",
+    "Hacktool Execution - Imphash",
+    "LSASS Access From Non System Account",
+    "LSASS Dump Keyword In CommandLine",
+    "LSASS Memory Access by Tool With Dump Keyword In Name",
+    "LSASS Process Memory Dump Creation Via Taskmgr.EXE",
+    "LSASS Process Memory Dump Files",
+    "Lsass Memory Dump via Comsvcs DLL",
+    "Password Dumper Activity on LSASS",
+    "Potential Credential Dumping Activity Via LSASS"
+   ]
+  },
+  {
+   "technique": "T1003.002",
+   "name": "OS Credential Dumping: Security Account Manager",
+   "tactic": "credential-access",
+   "outcome": "partial",
+   "datasets": 4,
+   "detected": 3,
+   "rules": [
+    "Copying Sensitive Files with Credential Data",
+    "Dumping of Sensitive Hives Via Reg.EXE",
+    "Esentutl Volume Shadow Copy Service Keys",
+    "LSASS Access From Non System Account",
+    "Potential SAM Database Dump",
+    "Potentially Suspicious AccessMask Requested From LSASS"
+   ]
+  },
+  {
+   "technique": "T1003.003",
+   "name": "OS Credential Dumping: NTDS",
+   "tactic": "credential-access",
+   "outcome": "partial",
+   "datasets": 4,
+   "detected": 3,
+   "rules": [
+    "HackTool - Generic Process Access",
+    "HackTool - Rubeus Execution",
+    "Invocation of Active Directory Diagnostic Tool (ntdsutil.exe)",
+    "Suspicious Process Patterns NTDS.DIT Exfil",
+    "Suspicious Usage Of Active Directory Diagnostic Tool (ntdsutil.exe)"
+   ]
+  },
+  {
+   "technique": "T1003.004",
+   "name": "OS Credential Dumping: LSA Secrets",
+   "tactic": "credential-access",
+   "outcome": "partial",
+   "datasets": 2,
+   "detected": 1,
+   "rules": [
+    "Dumping of Sensitive Hives Via Reg.EXE"
+   ]
+  },
+  {
+   "technique": "T1003.006",
+   "name": "OS Credential Dumping: DCSync",
+   "tactic": "credential-access",
+   "outcome": "detected",
+   "datasets": 2,
+   "detected": 2,
+   "rules": [
+    "Active Directory Replication from Non Machine Account",
+    "Mimikatz DC Sync"
+   ]
+  },
+  {
+   "technique": "T1012",
+   "name": "Query Registry",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1021",
+   "name": "Remote Services",
+   "tactic": "lateral-movement",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "CobaltStrike Service Installations - Security",
+    "Potential CobaltStrike Service Installations - Registry"
+   ]
+  },
+  {
+   "technique": "T1021.002",
+   "name": "Remote Services: SMB/Windows Admin Shares",
+   "tactic": "lateral-movement",
+   "outcome": "partial",
+   "datasets": 7,
+   "detected": 3,
+   "rules": [
+    "CobaltStrike Service Installations - Security",
+    "Potential CobaltStrike Service Installations - Registry",
+    "SMB Create Remote File Admin Share",
+    "Suspicious WSMAN Provider Image Loads"
+   ]
+  },
+  {
+   "technique": "T1021.003",
+   "name": "Remote Services: Distributed Component Object Model",
+   "tactic": "lateral-movement",
+   "outcome": "partial",
+   "datasets": 4,
+   "detected": 1,
+   "rules": [
+    "DCOM InternetExplorer.Application Iertutil DLL Hijack - Security",
+    "Potential DCOM InternetExplorer.Application DLL Hijack",
+    "Potential DCOM InternetExplorer.Application DLL Hijack - Image Load",
+    "SMB Create Remote File Admin Share"
+   ]
+  },
+  {
+   "technique": "T1021.006",
+   "name": "Remote Services: Windows Remote Management",
+   "tactic": "lateral-movement",
+   "outcome": "detected",
+   "datasets": 3,
+   "detected": 3,
+   "rules": [
+    "Potential Remote PowerShell Session Initiated",
+    "Remote LSASS Process Access Through Windows Remote Management",
+    "Remote PowerShell Session Host Process (WinRM)",
+    "Suspicious WSMAN Provider Image Loads"
+   ]
+  },
+  {
+   "technique": "T1037.001",
+   "name": "Boot or Logon Initialization Scripts: Logon Script (Windows)",
+   "tactic": "persistence",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Potential Persistence Via Logon Scripts - CommandLine",
+    "Potential Persistence Via Logon Scripts - Registry"
+   ]
+  },
+  {
+   "technique": "T1047",
+   "name": "Windows Management Instrumentation",
+   "tactic": "execution",
+   "outcome": "detected",
+   "datasets": 6,
+   "detected": 6,
+   "rules": [
+    "Potential WMI Lateral Movement WmiPrvSE Spawned PowerShell",
+    "Process Creation Attempt via Wmic.EXE",
+    "T1047 Wmiprvse Wbemcomn DLL Hijack",
+    "WMI Event Consumer Created Named Pipe",
+    "WMIC Remote Command Execution",
+    "WmiPrvSE Spawned A Process",
+    "Wmiprvse Wbemcomn DLL Hijack",
+    "Wmiprvse Wbemcomn DLL Hijack - File"
+   ]
+  },
+  {
+   "technique": "T1049",
+   "name": "System Network Connections Discovery",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1053.005",
+   "name": "Scheduled Task/Job: Scheduled Task",
+   "tactic": "execution",
+   "outcome": "partial",
+   "datasets": 4,
+   "detected": 3,
+   "rules": [
+    "Schtasks Creation Or Modification With SYSTEM Privileges",
+    "Suspicious Command Patterns In Scheduled Task Creation",
+    "Suspicious Schtasks Schedule Type With High Privileges"
+   ]
+  },
+  {
+   "technique": "T1055",
+   "name": "Process Injection",
+   "tactic": "privilege-escalation",
+   "outcome": "partial",
+   "datasets": 3,
+   "detected": 1,
+   "rules": [
+    "Mavinject Inject DLL Into Running Process",
+    "Remote Thread Creation In Uncommon Target Image",
+    "Renamed Mavinject.EXE Execution"
+   ]
+  },
+  {
+   "technique": "T1055.001",
+   "name": "Process Injection: Dynamic-link Library Injection",
+   "tactic": "privilege-escalation",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Remote Thread Creation In Uncommon Target Image"
+   ]
+  },
+  {
+   "technique": "T1055.002",
+   "name": "Process Injection: Portable Executable Injection",
+   "tactic": "privilege-escalation",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Remote Thread Creation In Uncommon Target Image"
+   ]
+  },
+  {
+   "technique": "T1055.003",
+   "name": "Process Injection: Thread Execution Hijacking",
+   "tactic": "privilege-escalation",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Network Connection Initiated Via Notepad.EXE",
+    "Remote Thread Creation In Uncommon Target Image"
+   ]
+  },
+  {
+   "technique": "T1056.002",
+   "name": "Input Capture: GUI Input Capture",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1059",
+   "name": "Command and Scripting Interpreter",
+   "tactic": "execution",
+   "outcome": "partial",
+   "datasets": 2,
+   "detected": 1,
+   "rules": [
+    "PCRE.NET Package Image Load",
+    "PCRE.NET Package Temp Files"
+   ]
+  },
+  {
+   "technique": "T1059.001",
+   "name": "Command and Scripting Interpreter: PowerShell",
+   "tactic": "execution",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1059.005",
+   "name": "Command and Scripting Interpreter: Visual Basic",
+   "tactic": "execution",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "HackTool - Empire PowerShell Launch Parameters",
+    "Net WebClient Casing Anomalies",
+    "Suspicious Execution of Powershell with Base64",
+    "Suspicious PowerShell Invocation From Script Engines",
+    "Suspicious PowerShell Invocations - Specific"
+   ]
+  },
+  {
+   "technique": "T1069.001",
+   "name": "Permission Groups Discovery: Local Groups",
+   "tactic": "discovery",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Malicious PowerShell Commandlets - PoshModule"
+   ]
+  },
+  {
+   "technique": "T1069.002",
+   "name": "Permission Groups Discovery: Domain Groups",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1087.002",
+   "name": "Account Discovery: Domain Account",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1110.003",
+   "name": "Brute Force: Password Spraying",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1112",
+   "name": "Modify Registry",
+   "tactic": "persistence",
+   "outcome": "partial",
+   "datasets": 3,
+   "detected": 1,
+   "rules": [
+    "NetNTLM Downgrade Attack",
+    "NetNTLM Downgrade Attack - Registry"
+   ]
+  },
+  {
+   "technique": "T1123",
+   "name": "Audio Capture",
+   "tactic": "collection",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Processes Accessing the Microphone and Webcam"
+   ]
+  },
+  {
+   "technique": "T1134.001",
+   "name": "Access Token Manipulation: Token Impersonation/Theft",
+   "tactic": "privilege-escalation",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Meterpreter or Cobalt Strike Getsystem Service Installation - Security",
+    "Potential Meterpreter/CobaltStrike Activity",
+    "Suspicious SYSTEM User Process Creation"
+   ]
+  },
+  {
+   "technique": "T1134.002",
+   "name": "Access Token Manipulation: Create Process with Token",
+   "tactic": "privilege-escalation",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Meterpreter or Cobalt Strike Getsystem Service Installation - Security",
+    "Potential Meterpreter/CobaltStrike Activity",
+    "Suspicious SYSTEM User Process Creation"
+   ]
+  },
+  {
+   "technique": "T1135",
+   "name": "Network Share Discovery",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1197",
+   "name": "BITS Jobs",
+   "tactic": "execution",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "File Download Via Bitsadmin",
+    "File Download Via Bitsadmin To A Suspicious Target Folder",
+    "File With Suspicious Extension Downloaded Via Bitsadmin",
+    "Suspicious Download From File-Sharing Website Via Bitsadmin"
+   ]
+  },
+  {
+   "technique": "T1210",
+   "name": "Exploitation of Remote Services",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218",
+   "name": "System Binary Proxy Execution",
+   "tactic": "stealth",
+   "outcome": "partial",
+   "datasets": 2,
+   "detected": 1,
+   "rules": [
+    "Proxy Execution Via Wuauclt.EXE"
+   ]
+  },
+  {
+   "technique": "T1218.001",
+   "name": "System Binary Proxy Execution: Compiled HTML File",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "HTML Help HH.EXE Suspicious Child Process",
+    "Legitimate Application Writing Files In Uncommon Location"
+   ]
+  },
+  {
+   "technique": "T1218.002",
+   "name": "System Binary Proxy Execution: Control Panel",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Control Panel Items",
+    "Potentially Suspicious Rundll32 Activity",
+    "Unsigned DLL Loaded by Windows Utility"
+   ]
+  },
+  {
+   "technique": "T1218.003",
+   "name": "System Binary Proxy Execution: CMSTP",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Bypass UAC via CMSTP",
+    "CMSTP Execution Process Access",
+    "CMSTP Execution Registry Event",
+    "CMSTP UAC Bypass via COM Object Access"
+   ]
+  },
+  {
+   "technique": "T1218.004",
+   "name": "System Binary Proxy Execution: InstallUtil",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Unsigned DLL Loaded by Windows Utility"
+   ]
+  },
+  {
+   "technique": "T1218.005",
+   "name": "System Binary Proxy Execution: Mshta",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 3,
+   "detected": 3,
+   "rules": [
+    "Legitimate Application Writing Files In Uncommon Location",
+    "MSHTA Execution with Suspicious File Extensions",
+    "Remotely Hosted HTA File Executed Via Mshta.EXE",
+    "Suspicious JavaScript Execution Via Mshta.EXE",
+    "Suspicious MSHTA Child Process",
+    "Windows Shell/Scripting Processes Spawning Suspicious Programs"
+   ]
+  },
+  {
+   "technique": "T1218.010",
+   "name": "System Binary Proxy Execution: Regsvr32",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Network Connection Initiated By Regsvr32.EXE",
+    "Potentially Suspicious Child Process Of Regsvr32",
+    "Potentially Suspicious Regsvr32 HTTP IP Pattern",
+    "Potentially Suspicious Regsvr32 HTTP/FTP Pattern",
+    "Scripting/CommandLine Process Spawned Regsvr32"
+   ]
+  },
+  {
+   "technique": "T1220",
+   "name": "XSL Script Processing",
+   "tactic": "stealth",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Potential Remote SquiblyTwo Technique Execution",
+    "WMIC Loading Scripting Libraries"
+   ]
+  },
+  {
+   "technique": "T1222.001",
+   "name": "File and Directory Permissions Modification: Windows Permissions",
+   "tactic": "defense-impairment",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1505.003",
+   "name": "Server Software Component: Web Shell",
+   "tactic": "persistence",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Suspicious Process By Web Server Process"
+   ]
+  },
+  {
+   "technique": "T1518",
+   "name": "Software Discovery",
+   "tactic": "discovery",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Detected Windows Software Discovery"
+   ]
+  },
+  {
+   "technique": "T1543.003",
+   "name": "Create or Modify System Process: Windows Service",
+   "tactic": "persistence",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Potential Persistence Attempt Via Existing Service Tampering",
+    "Suspicious Service Path Modification"
+   ]
+  },
+  {
+   "technique": "T1546.003",
+   "name": "Event Triggered Execution: Windows Management Instrumentation Event Subscription",
+   "tactic": "persistence",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "WMI Event Subscription",
+    "WMI Persistence",
+    "WMI Persistence - Command Line Event Consumer"
+   ]
+  },
+  {
+   "technique": "T1547.001",
+   "name": "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder",
+   "tactic": "persistence",
+   "outcome": "detected",
+   "datasets": 2,
+   "detected": 2,
+   "rules": [
+    "CurrentVersion Autorun Keys Modification",
+    "Suspicious PowerShell In Registry Run Keys"
+   ]
+  },
+  {
+   "technique": "T1548.002",
+   "name": "Abuse Elevation Control Mechanism: Bypass User Account Control",
+   "tactic": "privilege-escalation",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Bypass UAC Using DelegateExecute",
+    "Bypass UAC via Fodhelper.exe",
+    "HackTool - Empire PowerShell UAC Bypass",
+    "Shell Open Registry Keys Manipulation"
+   ]
+  },
+  {
+   "technique": "T1550.002",
+   "name": "Use Alternate Authentication Material: Pass the Hash",
+   "tactic": "lateral-movement",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Pass the Hash Activity 2",
+    "Successful Overpass the Hash Attempt"
+   ]
+  },
+  {
+   "technique": "T1558.003",
+   "name": "Steal or Forge Kerberos Tickets: Kerberoasting",
+   "tactic": "credential-access",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Kerberoasting Activity - Initial Query",
+    "Suspicious Kerberos RC4 Ticket Encryption"
+   ]
+  },
+  {
+   "technique": "T1574.001",
+   "name": "Hijack Execution Flow: DLL",
+   "tactic": "execution",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Creation Of Non-Existent System DLL",
+    "Potential DLL Sideloading Of Non-Existent DLLs From System Folders"
+   ]
+  },
+  {
+   "technique": "T1685.001",
+   "name": "Disable or Modify Tools: Disable or Modify Windows Event Log",
+   "tactic": "defense-impairment",
+   "outcome": "partial",
+   "datasets": 6,
+   "detected": 3,
+   "rules": [
+    "Audit Policy Tampering Via Auditpol",
+    "Disable Security Events Logging Adding Reg Key MiniNt",
+    "EVTX Created In Uncommon Location",
+    "Important Windows Event Auditing Disabled",
+    "Potential EventLog File Location Tampering",
+    "Security Event Logging Disabled via MiniNt Registry Key - Process",
+    "Security Event Logging Disabled via MiniNt Registry Key - Registry Set",
+    "Suspicious Eventlog Clearing or Configuration Change Activity"
+   ]
+  },
+  {
+   "technique": "T1686",
+   "name": "Disable or Modify System Firewall",
+   "tactic": "defense-impairment",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Firewall Rule Deleted Via Netsh.EXE",
+    "New Firewall Rule Added Via Netsh.EXE"
+   ]
+  }
+ ],
+ "exact_id_technique_coverage": 0.6667,
+ "seconds": 0.0,
+ "leakage_controlled": {
+  "rules_removed": 41,
+  "technique_coverage": 0.7778,
+  "dataset_recall": 0.6458
+ }
+}

@@ -1,0 +1,546 @@
+{
+ "ruleset": "legacy",
+ "rules": 6,
+ "datasets": 96,
+ "dataset_recall": 0.0312,
+ "datasets_any_alert": 14,
+ "technique_coverage": 0.0556,
+ "techniques": 54,
+ "events": 754299,
+ "off_target_rules_per_dataset": 0.15,
+ "off_target_alerts_per_10k_events": 0.23,
+ "by_tactic": {
+  "collection": {
+   "covered": 0,
+   "total": 1
+  },
+  "credential-access": {
+   "covered": 1,
+   "total": 9
+  },
+  "defense-impairment": {
+   "covered": 0,
+   "total": 3
+  },
+  "discovery": {
+   "covered": 0,
+   "total": 7
+  },
+  "execution": {
+   "covered": 2,
+   "total": 7
+  },
+  "lateral-movement": {
+   "covered": 0,
+   "total": 6
+  },
+  "persistence": {
+   "covered": 0,
+   "total": 6
+  },
+  "privilege-escalation": {
+   "covered": 0,
+   "total": 7
+  },
+  "stealth": {
+   "covered": 0,
+   "total": 8
+  }
+ },
+ "results": [
+  {
+   "technique": "T1003",
+   "name": "OS Credential Dumping",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1003.001",
+   "name": "OS Credential Dumping: LSASS Memory",
+   "tactic": "credential-access",
+   "outcome": "partial",
+   "datasets": 5,
+   "detected": 1,
+   "rules": [
+    "Suspicious access to LSASS"
+   ]
+  },
+  {
+   "technique": "T1003.002",
+   "name": "OS Credential Dumping: Security Account Manager",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 4,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1003.003",
+   "name": "OS Credential Dumping: NTDS",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 4,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1003.004",
+   "name": "OS Credential Dumping: LSA Secrets",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1003.006",
+   "name": "OS Credential Dumping: DCSync",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1012",
+   "name": "Query Registry",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1021",
+   "name": "Remote Services",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1021.002",
+   "name": "Remote Services: SMB/Windows Admin Shares",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 7,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1021.003",
+   "name": "Remote Services: Distributed Component Object Model",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 4,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1021.006",
+   "name": "Remote Services: Windows Remote Management",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 3,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1037.001",
+   "name": "Boot or Logon Initialization Scripts: Logon Script (Windows)",
+   "tactic": "persistence",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1047",
+   "name": "Windows Management Instrumentation",
+   "tactic": "execution",
+   "outcome": "partial",
+   "datasets": 6,
+   "detected": 1,
+   "rules": [
+    "WMIC process call create"
+   ]
+  },
+  {
+   "technique": "T1049",
+   "name": "System Network Connections Discovery",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1053.005",
+   "name": "Scheduled Task/Job: Scheduled Task",
+   "tactic": "execution",
+   "outcome": "missed",
+   "datasets": 4,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1055",
+   "name": "Process Injection",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 3,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1055.001",
+   "name": "Process Injection: Dynamic-link Library Injection",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1055.002",
+   "name": "Process Injection: Portable Executable Injection",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1055.003",
+   "name": "Process Injection: Thread Execution Hijacking",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1056.002",
+   "name": "Input Capture: GUI Input Capture",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1059",
+   "name": "Command and Scripting Interpreter",
+   "tactic": "execution",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1059.001",
+   "name": "Command and Scripting Interpreter: PowerShell",
+   "tactic": "execution",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1059.005",
+   "name": "Command and Scripting Interpreter: Visual Basic",
+   "tactic": "execution",
+   "outcome": "detected",
+   "datasets": 1,
+   "detected": 1,
+   "rules": [
+    "Encoded PowerShell command line"
+   ]
+  },
+  {
+   "technique": "T1069.001",
+   "name": "Permission Groups Discovery: Local Groups",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1069.002",
+   "name": "Permission Groups Discovery: Domain Groups",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1087.002",
+   "name": "Account Discovery: Domain Account",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1110.003",
+   "name": "Brute Force: Password Spraying",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1112",
+   "name": "Modify Registry",
+   "tactic": "persistence",
+   "outcome": "missed",
+   "datasets": 3,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1123",
+   "name": "Audio Capture",
+   "tactic": "collection",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1134.001",
+   "name": "Access Token Manipulation: Token Impersonation/Theft",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1134.002",
+   "name": "Access Token Manipulation: Create Process with Token",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1135",
+   "name": "Network Share Discovery",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1197",
+   "name": "BITS Jobs",
+   "tactic": "execution",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1210",
+   "name": "Exploitation of Remote Services",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218",
+   "name": "System Binary Proxy Execution",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218.001",
+   "name": "System Binary Proxy Execution: Compiled HTML File",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218.002",
+   "name": "System Binary Proxy Execution: Control Panel",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218.003",
+   "name": "System Binary Proxy Execution: CMSTP",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218.004",
+   "name": "System Binary Proxy Execution: InstallUtil",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218.005",
+   "name": "System Binary Proxy Execution: Mshta",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 3,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1218.010",
+   "name": "System Binary Proxy Execution: Regsvr32",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1220",
+   "name": "XSL Script Processing",
+   "tactic": "stealth",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1222.001",
+   "name": "File and Directory Permissions Modification: Windows Permissions",
+   "tactic": "defense-impairment",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1505.003",
+   "name": "Server Software Component: Web Shell",
+   "tactic": "persistence",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1518",
+   "name": "Software Discovery",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1543.003",
+   "name": "Create or Modify System Process: Windows Service",
+   "tactic": "persistence",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1546.003",
+   "name": "Event Triggered Execution: Windows Management Instrumentation Event Subscription",
+   "tactic": "persistence",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1547.001",
+   "name": "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder",
+   "tactic": "persistence",
+   "outcome": "missed",
+   "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1548.002",
+   "name": "Abuse Elevation Control Mechanism: Bypass User Account Control",
+   "tactic": "privilege-escalation",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1550.002",
+   "name": "Use Alternate Authentication Material: Pass the Hash",
+   "tactic": "lateral-movement",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1558.003",
+   "name": "Steal or Forge Kerberos Tickets: Kerberoasting",
+   "tactic": "credential-access",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1574.001",
+   "name": "Hijack Execution Flow: DLL",
+   "tactic": "execution",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1685.001",
+   "name": "Disable or Modify Tools: Disable or Modify Windows Event Log",
+   "tactic": "defense-impairment",
+   "outcome": "missed",
+   "datasets": 6,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1686",
+   "name": "Disable or Modify System Firewall",
+   "tactic": "defense-impairment",
+   "outcome": "missed",
+   "datasets": 1,
+   "detected": 0,
+   "rules": []
+  }
+ ],
+ "exact_id_technique_coverage": 0.037,
+ "seconds": 0.0
+}
