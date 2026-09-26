@@ -58,6 +58,17 @@ class KnowledgeBase:
     groups: dict[str, AttackGroup]
     software: dict[str, dict[str, Any]]
     tactic_order: tuple[str, ...] = ()
+    revoked: dict[str, str] = field(default_factory=dict)  # old technique id -> replacement
+
+    def canonical(self, tid: str) -> str:
+        """Map a revoked technique id (e.g. T1086, T1562.002) to its current replacement."""
+        seen = set()
+        while tid in self.revoked and tid not in seen:
+            seen.add(tid)
+            tid = self.revoked[tid]
+        if tid not in self.techniques and "." in tid and parent(tid) in self.revoked:
+            return self.canonical(parent(tid))
+        return tid
 
     # ------------------------------------------------------------------ stats
     def technique_group_counts(self, rollup: bool = True) -> Counter:
@@ -114,6 +125,7 @@ class KnowledgeBase:
                        for k, g in sorted(self.groups.items())},
             "software": {k: {"name": s["name"], "techniques": sorted(s["techniques"])}
                          for k, s in sorted(self.software.items())},
+            "revoked": dict(sorted(self.revoked.items())),
         }
 
     @classmethod
@@ -122,7 +134,7 @@ class KnowledgeBase:
         groups = {k: AttackGroup(k, g["name"], tuple(g["aliases"]), g["description"], set(g["techniques"]))
                   for k, g in d["groups"].items()}
         soft = {k: {"name": s["name"], "techniques": set(s["techniques"])} for k, s in d["software"].items()}
-        return cls(d["version"], techs, groups, soft, tuple(d.get("tactic_order", ())))
+        return cls(d["version"], techs, groups, soft, tuple(d.get("tactic_order", ())), dict(d.get("revoked", {})))
 
 
 def _ext_id(obj: dict[str, Any]) -> str | None:
@@ -192,7 +204,16 @@ def parse_stix(bundle: dict[str, Any], version: str = "") -> KnowledgeBase:
     if not version:
         coll = next((o for o in bundle.get("objects", []) if o.get("type") == "x-mitre-collection"), None)
         version = str(coll.get("x_mitre_version", "")) if coll else ""
-    return KnowledgeBase(version, techniques, groups, software, tactic_order)
+    # revoked techniques -> replacement ids (old Sigma tags / dataset labels use them)
+    old_ids = {o["id"]: _ext_id(o) for o in bundle.get("objects", [])
+               if o.get("type") == "attack-pattern" and o.get("revoked") and _ext_id(o)}
+    revoked: dict[str, str] = {}
+    for o in bundle.get("objects", []):
+        if o.get("type") == "relationship" and o.get("relationship_type") == "revoked-by":
+            src, dst = o.get("source_ref", ""), o.get("target_ref", "")
+            if src in old_ids and dst in stix2tech:
+                revoked[old_ids[src]] = stix2tech[dst]
+    return KnowledgeBase(version, techniques, groups, software, tactic_order, revoked)
 
 
 def load_stix(path: str | Path) -> KnowledgeBase:
