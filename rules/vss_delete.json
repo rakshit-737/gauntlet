@@ -1,0 +1,1 @@
+{"id":"vss_delete","title":"Shadow copy deletion","techniques":["T1490"],"logsource":"sysmon","detection":{"selection":{"EventID":1,"CommandLine|contains":"delete shadows"},"condition":"selection"}}
