@@ -23,6 +23,8 @@ All notable changes to this project are documented here. Format follows
 - CLI: `profiles`, `plan`, `manifest`, `predict`, `replay`, `bench`, `kb`; `sim` alias for
   the offline simulation.
 - `results/`: benchmark tables, JSON, Navigator layers and figures from real runs.
+- Revoked ATT&CK ids (e.g. T1086, T1562.x in ATT&CK v19) are mapped to their replacements
+  before scoring; leakage-controlled coverage excludes Sigma rules that cite OTRF data.
 - LICENSE (MIT), CONTRIBUTING, ADRs under `docs/adr/`, dataset card `docs/DATASETS.md`.
 
 ### Changed

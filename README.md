@@ -155,7 +155,7 @@ Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No
 
 - Every source is pinned to an immutable ref and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256).
 - `python -m gauntlet bench` is deterministic. Random baselines use fixed seeds, 30 per held-out group. Replay results are cached under `$GAUNTLET_DATA_DIR/cache`. A cold run takes about 25 minutes on a 16-core laptop; a cached re-run takes about 30 seconds.
-- CI (`.github/workflows/ci.yml`) runs ruff and 74 tests on Python 3.10/3.12/3.13 without downloads. The `@pytest.mark.realdata` tests run locally once the data is present.
+- CI (`.github/workflows/ci.yml`) runs ruff and the 76-test suite on Python 3.10/3.12/3.13 without downloads; the 2 `@pytest.mark.realdata` tests are skipped there and pass locally once the data is present.
 
 ## Prior art and how this differs
 
