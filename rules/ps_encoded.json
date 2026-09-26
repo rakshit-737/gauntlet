@@ -1,0 +1,16 @@
+{
+  "id": "ps_encoded",
+  "title": "Encoded PowerShell command line",
+  "techniques": [
+    "T1059.001"
+  ],
+  "logsource": "sysmon",
+  "detection": {
+    "selection": {
+      "EventID": 1,
+      "Image|endswith": "\\powershell.exe",
+      "CommandLine|re": "\\s-(e|en|enc|encodedcommand)\\s"
+    },
+    "condition": "selection"
+  }
+}
