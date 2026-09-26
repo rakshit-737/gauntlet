@@ -156,8 +156,8 @@ Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No
 
 ## Reproducibility
 
-- Every source is pinned to an immutable ref and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256).
-- `python -m gauntlet bench` is deterministic. Random baselines use fixed seeds, 30 per held-out group. Replay results are cached under `$GAUNTLET_DATA_DIR/cache`. A cold run takes about 25 minutes on a 16-core laptop; a cached re-run takes about 30 seconds.
+- Every source is pinned (git commit for OTRF and Atomic Red Team, release tag for SigmaHQ, versioned file name for ATT&CK) and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256).
+- `python -m gauntlet bench` is deterministic. Random baselines use fixed seeds, 30 per held-out group. Replay results are cached under `$GAUNTLET_DATA_DIR/cache`. A cold run takes about 25 minutes on a 16-core laptop; a cached re-run takes about a minute.
 - CI (`.github/workflows/ci.yml`) runs ruff and the 76-test suite on Python 3.10/3.12/3.13 without downloads; the 2 `@pytest.mark.realdata` tests are skipped there and pass locally once the data is present.
 
 ## Prior art and how this differs

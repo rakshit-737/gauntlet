@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download the real public datasets GAUNTLET benchmarks against.
 
-All sources are pinned to an immutable ref (git commit / release tag / versioned
+All sources are pinned (git commit / release tag / versioned
 file) and every file is verified against ``scripts/checksums.sha256`` when an
 entry exists. Run with ``--write-checksums`` once to (re)generate the manifest.
 

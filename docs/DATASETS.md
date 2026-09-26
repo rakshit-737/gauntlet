@@ -1,6 +1,6 @@
 # Dataset card
 
-All data is public, pinned to an immutable ref, fetched by
+All data is public, pinned (commit, release tag or versioned file name), fetched by
 `scripts/download_data.py`, and verified against `scripts/checksums.sha256`.
 Nothing below is committed to git except the small derived files listed at the end.
 
