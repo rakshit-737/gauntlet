@@ -65,7 +65,7 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         t1 = time.time()
         rules = {r.id: r for r in replay.load_ruleset(spec)}
         res = replay.replay_many(spec, datasets, workers=workers,
-                                 cache=root / "cache" / f"replay-{name}-{paths.SIGMA_TAG}.json")
+                                 cache=root / "cache" / f"replay-v2-{name}-{paths.SIGMA_TAG}.json")
         replays[name], rule_objs[name] = res, rules
         s = coverage.score(name, res, rules, kb)
         summaries[name] = s

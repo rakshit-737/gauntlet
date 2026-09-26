@@ -88,9 +88,18 @@ def normalize(ev: dict[str, Any]) -> tuple[str, int | None, dict[str, Any]]:
 
 
 def iter_events(path: str | Path) -> Iterator[dict[str, Any]]:
-    """Yield raw event dicts from a recording (.zip of .json lines, or a .json/.jsonl file)."""
+    """Yield raw event dicts from a recording (.zip / .tar.gz of JSON lines, or a plain .json file)."""
     p = Path(path)
-    if p.suffix == ".zip":
+    if p.name.endswith((".tar.gz", ".tgz")):
+        import tarfile
+
+        with tarfile.open(p, "r:gz") as tf:
+            for m in tf.getmembers():
+                if m.isfile():
+                    fh = tf.extractfile(m)
+                    if fh is not None:
+                        yield from _iter_lines(fh)
+    elif p.suffix == ".zip":
         with zipfile.ZipFile(p) as z:
             for name in z.namelist():
                 if name.endswith("/"):

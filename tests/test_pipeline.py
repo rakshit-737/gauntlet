@@ -230,3 +230,17 @@ def test_parse_stix_version_from_collection():
     b = mini_bundle()
     b["objects"].append({"type": "x-mitre-collection", "id": "c", "x_mitre_version": "19.2"})
     assert parse_stix(b).version == "19.2"
+
+
+def test_iter_events_tar_gz(tmp_path):
+    import io
+    import tarfile
+    data = b'{"Channel": "Security", "EventID": 4624}
+{"Channel": "System", "EventID": 7045}
+'
+    p = tmp_path / "rec.tar.gz"
+    with tarfile.open(p, "w:gz") as tf:
+        info = tarfile.TarInfo("rec.json")
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+    assert [e["EventID"] for e in mordor.iter_events(p)] == [4624, 7045]
