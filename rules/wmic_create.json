@@ -1,0 +1,16 @@
+{
+  "id": "wmic_create",
+  "title": "WMIC process call create",
+  "techniques": [
+    "T1047"
+  ],
+  "logsource": "sysmon",
+  "detection": {
+    "selection": {
+      "EventID": 1,
+      "Image|endswith": "\\wmic.exe",
+      "CommandLine|contains": "call create"
+    },
+    "condition": "selection"
+  }
+}
