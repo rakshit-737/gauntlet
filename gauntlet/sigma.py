@@ -31,6 +31,9 @@ from typing import Any
 
 import yaml
 
+# libyaml's C loader is ~10x faster on the 3k-rule SigmaHQ release; same safe semantics
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
 SYSMON = "microsoft-windows-sysmon/operational"
 SECURITY = "security"
 PS_OP = "microsoft-windows-powershell/operational"
@@ -593,7 +596,7 @@ class RuleSet:
 
 
 def _iter_docs(text: str) -> Iterator[dict[str, Any]]:
-    docs = [d for d in yaml.safe_load_all(text) if isinstance(d, dict)]
+    docs = [d for d in yaml.load_all(text, Loader=_YAML_LOADER) if isinstance(d, dict)]
     if len(docs) <= 1:
         yield from docs
         return
@@ -629,7 +632,22 @@ def load_rules_from_texts(items: Iterable[tuple[str, str]]) -> RuleSet:
     return RuleSet(rules, unsupported)
 
 
+_RULESET_CACHE: dict[tuple[str, float, str | tuple[str, ...]], RuleSet] = {}
+
+
 def load_rules(source: str | Path, subdir_prefix: str | tuple[str, ...] = "") -> RuleSet:
+    """Load (and memoise per process) Sigma rules; see :func:`_load_rules`."""
+    p = Path(source)
+    key = (str(p.resolve()), p.stat().st_mtime if p.is_file() else -1.0, subdir_prefix)
+    if p.is_file() and key in _RULESET_CACHE:
+        return _RULESET_CACHE[key]
+    rs = _load_rules(p, subdir_prefix)
+    if p.is_file():
+        _RULESET_CACHE[key] = rs
+    return rs
+
+
+def _load_rules(source: str | Path, subdir_prefix: str | tuple[str, ...] = "") -> RuleSet:
     """Load Sigma rules from a directory of .yml files or a SigmaHQ release zip.
 
     ``subdir_prefix`` restricts to paths under e.g. ``rules/windows``.
