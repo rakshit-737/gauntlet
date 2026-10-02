@@ -38,6 +38,7 @@ STRATEGIES = ("cti", "relevance", "prevalence", "breadth", "random")
 
 @dataclass(frozen=True)
 class Ranked:
+    """A technique with its priority score and the components that produced it."""
     technique: str
     score: float
     relevance: float
@@ -62,6 +63,7 @@ def _uses(groups: Iterable[AttackGroup]) -> list[set[str]]:
 
 
 def relevance(groups: Sequence[AttackGroup]) -> dict[str, float]:
+    """Share of ``groups`` that use each technique (sub-techniques also credit their parent)."""
     sets = _uses(groups)
     n = max(len(sets), 1)
     out: dict[str, float] = {}
@@ -72,6 +74,7 @@ def relevance(groups: Sequence[AttackGroup]) -> dict[str, float]:
 
 
 def prevalence(groups: Sequence[AttackGroup]) -> dict[str, float]:
+    """Global prevalence: :func:`relevance` computed over all (or all-but-held-out) ATT&CK groups."""
     return relevance(groups)
 
 
@@ -102,6 +105,7 @@ def rank(candidates: Iterable[str], rel: dict[str, float], prev: dict[str, float
 
 # ------------------------------------------------------------------ evaluation
 def recall_curve(order: Sequence[str], target: set[str]) -> list[float]:
+    """Fraction of ``target`` covered after each step of ``order`` (one value per step)."""
     got, out = 0, []
     for t in order:
         got += t in target
@@ -110,6 +114,7 @@ def recall_curve(order: Sequence[str], target: set[str]) -> list[float]:
 
 
 def steps_to(curve: Sequence[float], level: float) -> int:
+    """First step (1-based) at which ``curve`` reaches ``level``; ``len(curve) + 1`` if never."""
     for i, v in enumerate(curve, 1):
         if v >= level - 1e-12:
             return i

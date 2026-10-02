@@ -17,6 +17,7 @@ from collections.abc import Sequence
 
 
 def wilson(successes: int, n: int, z: float = 1.959964) -> tuple[float, float]:
+    """95% Wilson score interval for ``successes`` out of ``n`` (rounded to 4 decimals)."""
     if n <= 0:
         return (0.0, 0.0)
     p = successes / n
@@ -28,6 +29,7 @@ def wilson(successes: int, n: int, z: float = 1.959964) -> tuple[float, float]:
 
 def bootstrap_ci(values: Sequence[float], n_boot: int = 2000, alpha: float = 0.05,
                  seed: int = 0) -> tuple[float, float]:
+    """Percentile bootstrap CI of the mean of ``values`` (fixed ``seed``, ``n_boot`` resamples)."""
     vals = list(values)
     if not vals:
         return (0.0, 0.0)

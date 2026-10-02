@@ -21,6 +21,7 @@ from . import stats
 
 
 class CooccurrenceModel:
+    """Item-item cosine co-occurrence model over ATT&CK group technique sets."""
     def __init__(self, sets: Iterable[set[str]]):
         self.n: Counter = Counter()
         self.co: dict[str, Counter] = defaultdict(Counter)
