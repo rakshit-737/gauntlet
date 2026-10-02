@@ -15,7 +15,7 @@ authors = [{name = "Rakshit"}]
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "ruff==0.8.4", "build"]
-figures = ["matplotlib>=3.8"]
+figures = ["matplotlib>=3.10.9"]
 
 [project.scripts]
 gauntlet = "gauntlet.cli:main"
