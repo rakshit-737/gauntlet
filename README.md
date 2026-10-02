@@ -7,70 +7,81 @@
 ![ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v19.2-red)
 ![Sigma](https://img.shields.io/badge/SigmaHQ-r2026--07--01-orange)
 
-**Threat-informed purple-team coverage scoring: rank ATT&CK techniques by what real actors do, replay real recorded attacks through your Sigma rules, and get a measured coverage matrix, the cheapest gaps to close, and a CI regression gate.**
+**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns**.
 
-Purple-teaming is usually manual and unprioritized. GAUNTLET closes the loop
-**CTI → prioritized emulation plan → telemetry → detections → coverage → ranked gaps → regression gate**,
-using only public data.
+It also ranks techniques by what real ATT&CK groups do, turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data.
 
-**Docs:** <https://rakshit-737.github.io/gauntlet/> (with an interactive [coverage explorer](https://rakshit-737.github.io/gauntlet/demo/)). **Image:** `ghcr.io/rakshit-737/gauntlet`.
+<p align="center"><a href="https://rakshit-737.github.io/gauntlet/demo/"><img src="docs/assets/demo.png" width="760" alt="GAUNTLET coverage explorer: per-tactic and per-technique coverage for SigmaHQ rule sets"></a></p>
 
+**Docs:** <https://rakshit-737.github.io/gauntlet/>: [How it works](https://rakshit-737.github.io/gauntlet/how-it-works/), [Evaluation](https://rakshit-737.github.io/gauntlet/evaluation/), [Reproduce](https://rakshit-737.github.io/gauntlet/reproduce/) and the [live coverage explorer](https://rakshit-737.github.io/gauntlet/demo/). **Image:** `ghcr.io/rakshit-737/gauntlet`.
 
-| Stage | Real data used |
-|---|---|
-| Prioritize | MITRE ATT&CK Enterprise v19.2: 176 groups, 697 techniques, procedure-based prevalence |
-| Emulate | Atomic Red Team Windows index (1,253 tests) as a dry-run manifest, plus **replay of OTRF Security-Datasets**: 96 recordings of real technique executions (754k Windows events) |
-| Detect | SigmaHQ release r2026-07-01, 2,519 Windows rules run by an in-process Sigma evaluator |
-| Score | Per-technique coverage, off-target alert burden, threat-weighted coverage, per-tactic view, ATT&CK Navigator layers |
+## Try it in 60 seconds
 
-> Lab-only project. GAUNTLET **never executes attack techniques**. It reads recorded logs and prints
-> test names. See [Safety](#lab-only-safety-note).
+```bash
+python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install "git+https://github.com/rakshit-737/gauntlet@main"
+gauntlet plan --profile ransomware --top 10          # CTI-prioritized emulation plan (offline)
+gauntlet predict --observed T1566.001,T1059.001 -k 5 # likely next techniques
+# no Python? the container works the same way:
+docker run --rm ghcr.io/rakshit-737/gauntlet:latest plan --profile ransomware --top 10
+```
 
-## Headline results (real data)
+The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`.
 
-Full tables: [`results/RESULTS.md`](results/RESULTS.md). Reproduce with `python -m gauntlet bench`.
+> Lab-only. The `gauntlet` package **never executes attack techniques**: it reads recorded logs and prints
+> Atomic Red Team test names marked DRY RUN. One CI job runs an allowlist of benign, read-only discovery
+> commands (`whoami`, `id`, `uname -a`, ...) on an ephemeral GitHub runner to collect auditd telemetry
+> ([ADR 0005](docs/adr/0005-benign-live-emulation.md)). See [Safety](#lab-only-safety-note).
 
-**Detection coverage on 96 OTRF recordings covering 54 ATT&CK techniques**
+## Headline results
 
-Brackets: 95% Wilson intervals. With only 54 techniques and 96 recordings, the intervals are wide (about ±12 points).
+Every number below is in a committed file under [`results/`](results/), produced by the cold [`benchmark`](.github/workflows/benchmark.yml) and [`live-telemetry`](.github/workflows/live-telemetry.yml) workflows on clean ubuntu-24.04 runners. Brackets are 95% Wilson intervals.
 
-| Rule set | Rules | Technique coverage | Exact-ID coverage | w/o rules citing OTRF data | Recordings detected | Off-target alerts / 10k events |
+**1. Claimed vs measured coverage (the novel result).** *Claimed* means at least one rule is tagged with the technique; *measured* means such a rule actually fired on a recording of it. Technique coverage counts a technique as covered if any of its recordings is detected, so partially detected techniques count. ([`EXTENDED.md`](results/EXTENDED.md))
+
+<p align="center"><img src="results/claimed_vs_measured.png" width="640" alt="Claimed versus measured coverage per data source"></p>
+
+| Source (SigmaHQ release package) | Recordings | Techniques | Claimed by tags | Measured | Fully detected | Exact McNemar p |
 |---|---:|---:|---:|---:|---:|---:|
-| Baseline: GAUNTLET v0.1 hand-written rules | 6 | 5.6% [1.9, 15.1] | 3.7% | n/a | 3.1% [1.1, 8.8] | 0.23 |
-| SigmaHQ *core* (stable/test, high/critical) | 1,365 | **66.7%** [53.4, 77.8] | 57.4% | 61.1% | 53.1% [43.2, 62.8] | 11.2 |
-| SigmaHQ *all* Windows rules | 2,519 | **81.5%** [69.2, 89.6] | 66.7% | 77.8% | 69.8% [60.0, 78.1] | 53.7 |
+| OTRF atomic (Windows) | 98 | 55 | 100.0% | **80.0%** [67.6, 88.4] | 58.2% | 0.001 |
+| OTRF compound LSASS campaigns | 7 | 13 | 100.0% | 23.1% [8.2, 50.3] | 23.1% | 0.002 |
+| Splunk attack_data, Windows | 398 | 188 | 94.7% | 36.2% [29.6, 43.2] | 16.0% | < 1e-30 |
+| Splunk attack_data, Linux | 154 | 55 | 70.9% | 10.9% [5.1, 21.8] | 1.8% | < 1e-9 |
 
-The baseline is 6 of the 7 v0.1 rules in `gauntlet/data/rules/`. The password-spray rule is a count threshold with no Sigma equivalent here, so it is not replayed.
+Almost every claimed-but-missed technique is a *rule-logic gap*: the telemetry is in the recording, but no tagged rule matched it. Adding SigmaHQ's low-level and threat-hunting rules (`sigma-full`) raises OTRF coverage to 85.5% and Splunk Windows coverage to 38.8%.
 
-- **Coverage sprint.** The v0.1 baseline covers 5.6% of recorded techniques. Adding only the **10 greedily chosen "cheapest-win" Sigma rules** takes it to **35.2%**, or 44.6% when weighted by the ransomware profile.
-- **Precision cost.** Going from *core* to *all* adds 15 points of coverage and roughly 5x the off-target alerts (11 to 54 per 10k events).
-- **Telemetry ablation** (core rules). Dropping Sysmon loses 5 detected techniques. Dropping the Security log loses 3. Dropping PowerShell/Operational loses 1.
-- **Blind spots.** Discovery is the weakest tactic: 1 of 7 recorded discovery techniques is detected by core rules.
+**2. Live telemetry vs replay.** A CI runner executes 9 benign discovery commands under auditd, and each audit record is labelled with the command that produced it. ([`LIVE.md`](results/LIVE.md))
 
-**Research question: does CTI-prioritized emulation reach relevant coverage faster than breadth-first?**
-Leave-one-group-out test: rank the 266 ART-emulatable techniques using every *other* group in the profile, then measure how fast each ordering covers the held-out actor's techniques.
+- The SigmaHQ release package detects **0 of 4** of these techniques. The full tag (with low and informational rules) detects **3 of 4** (T1033, T1082, T1057).
+- Splunk's replayed auditd recordings of the same techniques are detected **0 times**: they contain no `EXECVE` records.
+- `whoami` is detected, but `/usr/bin/whoami` is not, because the rule matches `a0 == "whoami"` literally.
+- `crontab -l` is tagged T1007 upstream, so it does not count as cron discovery (T1053.003).
 
-| Profile (held-out groups) | CTI (relevance × prevalence) steps to 80% | Breadth-first (ATT&CK ID order) | Random | AUC CTI vs breadth |
-|---|---:|---:|---:|---:|
-| ransomware (18) | **118.9** | 194.4 | 211.9 | 0.718 vs 0.568 |
-| espionage (57) | **103.2** | 196.8 | 211.2 | 0.761 vs 0.580 |
-| financial (24) | **123.7** | 201.9 | 211.8 | 0.727 vs 0.569 |
-| cloud (4) | 147.2 (prevalence alone: **123.0**) | 196.2 | 210.7 | 0.692 vs 0.577 |
+**3. Rule sets on OTRF** ([`RESULTS.md`](results/RESULTS.md)):
 
-<p align="center"><img src="results/prioritization_ransomware.png" width="620" alt="Recall of held-out ransomware actor techniques versus number of techniques emulated, per ordering strategy"></p>
+| Rule set | Rules | Technique coverage | Fully detected | Exact-ID | w/o OTRF-citing rules | Recordings detected | Off-target alerts / 10k events |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| GAUNTLET v0.1 hand-written | 6 | 5.5% [1.9, 14.8] | 1.8% | 3.6% | n/a | 3.1% | 0.22 |
+| SigmaHQ *core* (stable/test, high/critical) | 1,365 | **65.5%** [52.2, 76.6] | 40.0% | 56.4% | 58.2% | 52.0% | 11.1 |
+| SigmaHQ release package (medium+) | 2,519 | **80.0%** [67.6, 88.4] | 58.2% | 65.5% | 76.4% | 68.4% | 53.5 |
 
-The answer is **yes**. CTI ordering needs 39-48% fewer emulations than breadth-first to reach 80% of a held-out actor's techniques on the three larger profiles (25% on the 4-group cloud profile).
-Paired over the same held-out groups, CTI minus breadth-first is -75.5 steps [95% CI -85.0, -65.8] for ransomware, -93.6 [-102.2, -85.0] for espionage, -78.2 [-88.3, -68.4] for financial and -49.0 [-74.5, -23.0] for cloud.
-Profile-specific relevance adds little on top of global ATT&CK prevalence. For ransomware CTI beats `prevalence` alone by 8.0 steps [3.9, 12.2]. On espionage and financial the difference is indistinguishable from zero (+0.0 [-1.0, +0.9] and -0.8 [-3.6, +1.9]). On cloud `prevalence` is better by 24.2 steps [9.0, 44.8], where only 4 groups inform the relevance term. Most of the value comes from "what is common everywhere", not from actor-specific tailoring.
+- Core to all: 8 techniques gained, 0 lost (McNemar p = 0.008), for about 5x the off-target alerts.
+- Adding the top-10 greedy cheapest-win rules **from the release package** to the v0.1 baseline takes it from 5.5% to 34.5% (43.8% ransomware-weighted). That result is in-sample.
+- Out of sample, the same greedy selection does not transfer. Ten rules chosen on OTRF cover 0.5-1.1% of Splunk Windows techniques, no better than 10 random OTRF-firing rules (0.9% [0.0, 2.1]).
+- Discovery is the weakest tactic with more than one technique: 1 of 8 is detected by *core*.
 
-**Next-technique prediction.** An item-item co-occurrence model trained on ATT&CK group technique sets (leave-one-group-out, half of each group hidden) reaches recall@10 of 0.235, against 0.191 for a popularity baseline at sub-technique level. At technique level it is 0.311 against 0.278. The paired gains are +0.044 [95% CI +0.026, +0.064] and +0.034 [+0.021, +0.048]. Over 5 hide-split seeds the sub-technique recall@10 is 0.237 ± 0.003 against 0.194 ± 0.002.
+**4. Does CTI-prioritized emulation beat breadth-first?** In a leave-one-group-out test, CTI ordering reaches 80% of a held-out actor's techniques in 118.9 / 103.2 / 123.7 emulations, against 194.4 / 196.8 / 201.9 for breadth-first (ransomware / espionage / financial). The paired difference for ransomware is -75.5 steps [-85.0, -65.8]. Breadth-first (ATT&CK ID order) is close to random (AUC 0.57 vs 0.50), so most of the gain is global prevalence. Actor-specific relevance adds 8.0 steps [3.9, 12.2] for ransomware, and nothing measurable for espionage or financial. The cloud profile has only 4 groups, and its differences are not statistically distinguishable (sign test p = 0.125).
 
-<p align="center"><img src="results/tactic_coverage.png" width="620" alt="Per-tactic detection coverage for three rule sets"></p>
+<p align="center"><img src="results/prioritization_ransomware.png" width="620" alt="Recall of held-out ransomware actor techniques versus techniques emulated, with the 80% crossing marked"></p>
+
+**5. Next-technique prediction.** A co-occurrence model beats popularity on recall@10: +0.044 [+0.026, +0.064] at sub-technique level and +0.034 [+0.021, +0.048] at technique level. At technique level, popularity has the higher MRR (0.926 vs 0.909).
+
+**6. Published numbers** ([`PUBLISHED.md`](results/PUBLISHED.md)). CTID's *Top ATT&CK Techniques* flags 50 of 53 OTRF techniques as having a Sigma rule; 42 are measured as detected. RedGap's benign Linux lab publishes 33 of 51 techniques detected; per-technique agreement with GAUNTLET's live run is listed. Neither is like-for-like (different snapshots and telemetry). No published SigmaHQ technique coverage on OTRF or Splunk recordings exists to compare with.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph CTI["CTI - MITRE ATT&CK v19.2"]
     KB["attack.py<br/>STIX to KB, revoked-id map"]
   end
@@ -79,13 +90,15 @@ flowchart LR
   KB --> PRED["predict.py<br/>co-occurrence next-technique"]
   PR --> PLAN["atomics.py<br/>dry-run ART manifest"]
   PR --> SEL["recordings for<br/>prioritized techniques"]
-  OTRF[("OTRF Security-Datasets<br/>recorded Windows telemetry")] --> SEL
-  SEL --> RP["replay.py<br/>channel/EventID-indexed replay<br/>process pool + cache"]
-  SIG[("SigmaHQ rules")] --> SE["sigma.py<br/>Sigma evaluator"]
+  REC[("OTRF atomic + compound,<br/>Splunk attack_data")] --> SEL
+  LIVE[("live auditd, CI runner<br/>event-level labels")] --> FMT["formats.py<br/>JSON / XML / auditd"]
+  SEL --> FMT
+  FMT --> RP["replay.py<br/>channel/EventID-indexed replay<br/>process pool + fingerprinted cache"]
+  SIG[("SigmaHQ rules")] --> SE["sigma.py<br/>Sigma evaluator, Windows + Linux"]
   SE --> RP
   RP --> COV["coverage.py<br/>coverage, off-target burden,<br/>cheapest wins, ablation"]
+  COV --> EXT["extended.py / live.py / published.py<br/>claimed vs measured, live vs replay,<br/>published comparison"]
   COV --> NAV["ATT&CK Navigator layer"]
-  COV --> REP["results/ + figures"]
   COV --> REG["regression gate<br/>--baseline, exit 2"]
   SIM["offline simulation<br/>cti/plans/range_sim"] -.-> REG
 ```
@@ -94,41 +107,42 @@ flowchart LR
 |---|---|
 | `attack.py` | Parses ATT&CK STIX 2.1 into techniques, tactics, groups (software-inherited techniques included), prevalence and the revoked-id map (for example T1086 → T1059.001). A 426 KB derivative ships in the package |
 | `prioritize.py` | Builds profiles from real groups (regex over group descriptions or explicit IDs) and ranks with the `cti`, `relevance`, `prevalence`, `breadth` and `random` strategies. Includes the leave-one-group-out evaluation |
-| `sigma.py` | Evaluates SigmaHQ YAML directly. Supports the full condition grammar (except aggregations), 20+ modifiers, Sysmon/Security-4688/PowerShell logsource and field mapping. Anything unsupported is reported, never silently ignored |
-| `mordor.py`, `replay.py` | Load OTRF recordings (zip or tar.gz, JSON lines) and replay them through a rule set indexed by `(channel, EventID)`, in parallel and cached |
+| `sigma.py` | Evaluates SigmaHQ YAML directly: the full condition grammar except aggregations, more than 20 modifiers, and Windows (Sysmon, Security 4688, PowerShell) and Linux (Sysmon for Linux, auditd) logsources. Anything unsupported is reported, never silently ignored |
+| `formats.py`, `mordor.py`, `replay.py` | Parse JSON-lines, XML-event and raw auditd recordings (OTRF atomic and compound, Splunk), and replay them through a rule set indexed by `(channel, EventID)`, in parallel and cached |
 | `coverage.py` | Scores family and exact-ID matches, off-target alert burden, threat-weighted coverage, greedy cheapest-win rules and channel ablation, and exports ATT&CK Navigator 4.5 layers |
+| `extended.py`, `live.py`, `published.py` | Cross-dataset claimed-vs-measured analysis and held-out rule selection; live auditd scoring with event-level labels; comparison with CTID and RedGap |
 | `predict.py` | Item-item cosine co-occurrence model with leave-one-group-out evaluation against a popularity baseline |
 | `atomics.py` | Atomic Red Team Windows index and a DRY-RUN manifest in priority order |
-| `bench.py`, `figures.py` | The whole benchmark, which writes `results/` |
+| `bench.py`, `figures.py` | The OTRF benchmark, which writes `results/` |
 | `cti.py`, `plans.py`, `range_sim.py`, `detect.py`, `score.py` | The v0.1 offline simulation, kept as a zero-download demo of the regression gate |
 
 Design decisions are recorded in [`docs/adr/`](docs/adr/).
 
-## Quickstart
+## Quickstart (from a checkout)
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 
 # Works offline (ATT&CK KB + ART index ship with the package)
-python -m gauntlet profiles                                  # real ATT&CK groups per profile
-python -m gauntlet plan --profile ransomware --top 15        # CTI-prioritized emulation plan
-python -m gauntlet plan --profile APT29,G0007 --top 10       # custom profile from groups
-python -m gauntlet predict --observed T1566.001,T1059.001    # likely next techniques
-python -m gauntlet manifest --profile ransomware --top 10 --out plan.json   # DRY-RUN ART manifest
+gauntlet profiles                                  # real ATT&CK groups per profile
+gauntlet plan --profile ransomware --top 15        # CTI-prioritized emulation plan
+gauntlet plan --profile APT29,G0007 --top 10       # custom profile from groups
+gauntlet predict --observed T1566.001,T1059.001    # likely next techniques
+gauntlet manifest --profile ransomware --top 10 --out out/plan.json   # DRY-RUN ART manifest
 
-# Real data (~117 MB, pinned + SHA-256 verified)
-export GAUNTLET_DATA_DIR=/path/outside/repo                   # default ./data (git-ignored)
+# Real data (~117 MB, pinned + SHA-256 verified; add --only ...,mordor-compound,splunk,published for ~65 MB more)
+export GAUNTLET_DATA_DIR=/path/outside/repo        # default ./data (git-ignored)
 python scripts/download_data.py
-python -m gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
-       --navigator layer.json --json baseline.json            # coverage on real recordings
-python -m gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
-       --baseline baseline.json                               # exit 2 on a coverage regression
-python -m gauntlet bench                                      # full benchmark -> results/
+gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
+       --navigator out/layer.json --json out/baseline.json   # coverage on real recordings
+gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
+       --baseline out/baseline.json                          # exit 2 on a coverage regression
+gauntlet bench --out out                                     # OTRF benchmark
 ```
 
-`make` targets exist (`make data`, `make bench`, `make demo`, `make test`) for systems that have make.
+Exact commands, expected outputs and runtimes for every published number are in [Reproduce](https://rakshit-737.github.io/gauntlet/reproduce/).
 
-Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged):
+Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged, from v1.0.0):
 
 ```text
 Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 groups) through sigma-core ...
@@ -146,70 +160,73 @@ Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 
 Technique coverage: 56%  threat-weighted: 61%  off-target rules/recording: 1.5
 ```
 
-The top-priority gaps are PowerShell (T1059.001), Run keys (T1547.001) and discovery. For T1547.001 the full SigmaHQ set *does* detect both recordings, but only with medium-level rules that the *core* filter drops. That is exactly the kind of trade-off the coverage matrix is meant to surface.
+The 56% is over the 18 techniques labelled on the 33 chosen recordings, which include 3 co-labelled techniques beyond the 15 prioritized ones; over the 15 prioritized techniques alone it is 9/15 = 60%. For T1547.001 the full SigmaHQ package *does* detect both recordings, but only with medium-level rules that the *core* filter drops.
 
-Load `layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to view coverage as a heatmap: green = detected, amber = partial, red = missed.
+Load `out/layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to view coverage as a heatmap: green = detected, amber = partial, red = missed.
 
 ## Datasets
 
 | Dataset | Version | Size | Licence |
 |---|---|---:|---|
-| [MITRE ATT&CK Enterprise STIX](https://github.com/mitre-attack/attack-stix-data) | v19.2 | 54 MB | ATT&CK Terms of Use (attribution) |
-| [SigmaHQ rules](https://github.com/SigmaHQ/sigma) | r2026-07-01 | 3 MB | Detection Rule License 1.1 |
-| [OTRF Security-Datasets](https://github.com/OTRF/Security-Datasets) (Mordor), Windows atomic host recordings | commit `d9d40ef1` | 60 MB | MIT |
+| [MITRE ATT&CK Enterprise STIX](https://github.com/mitre-attack/attack-stix-data) | v19.2 (commit `6cda5ad8`) | 54 MB | ATT&CK Terms of Use (attribution) |
+| [SigmaHQ rules](https://github.com/SigmaHQ/sigma) | r2026-07-01 release package (+ tag checkout for `sigma-full`) | 3 MB (+30 MB) | Detection Rule License 1.1 |
+| [OTRF Security-Datasets](https://github.com/OTRF/Security-Datasets), Windows atomic + compound host recordings | commit `d9d40ef1` | 60 + 22 MB | MIT |
+| [Splunk attack_data](https://github.com/splunk/attack_data), Windows XML + Linux Sysmon/auditd, files ≤ 2 MB | commit `b4573ed3` | 39 MB | Apache-2.0 |
 | [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team) Windows index | commit `388942ad` | 0.2 MB | MIT |
+| [CTID Top ATT&CK Techniques](https://github.com/center-for-threat-informed-defense/top-attack-techniques), [RedGap](https://github.com/befnoz/redgap) coverage | `87cc589e`, `a9bcbf2c` | 3.9 MB | Apache-2.0, MIT |
 
-Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No dataset is committed. Only small derived artefacts are: the KB JSON, the ART index JSON and `results/`.
+Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No dataset is committed. Only small derived artefacts are committed: the KB JSON, the ART index JSON, the Splunk manifest and `results/`.
 
 ## Reproducibility
 
-- Every source is pinned (git commit for OTRF and Atomic Red Team, release tag for SigmaHQ, versioned file name for ATT&CK) and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256).
-- `python -m gauntlet bench` is deterministic. Random baselines use fixed seeds, 30 per held-out group. Replay results are cached under `$GAUNTLET_DATA_DIR/cache`. A cold run takes about 25 minutes on a 16-core laptop; a cached re-run takes about a minute.
-- CI (`.github/workflows/ci.yml`) runs ruff and the 78 offline tests on Python 3.10/3.12/3.13 without downloads; the 2 `@pytest.mark.realdata` tests are skipped there and pass locally once the data is present.
+- Every source is pinned (git commit or release tag) and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256), or against git-LFS sha256 oids for Splunk.
+- The committed `results/` come from the cold `benchmark` workflow on a clean Linux runner. On that 4-core runner, `bench` takes about 3 minutes cold and `extended` about 4. Random baselines use fixed seeds, and the replay cache is keyed by a fingerprint of the rules and evaluator code.
+- CI runs ruff, the offline tests on Python 3.10-3.14, wheel/sdist/container smoke tests, pip-audit and gitleaks. The `@pytest.mark.realdata` tests run locally once the data is present.
 
 ## Prior art and how this differs
 
 | Existing | What it does well | GAUNTLET's angle |
 |---|---|---|
-| MITRE Caldera | Full adversary emulation | Coverage measurement and CTI prioritization are first-class, and the output is a measured matrix |
+| MITRE Caldera | Full adversary emulation | Coverage measurement and CTI prioritization are first-class; the output is a measured matrix |
 | Atomic Red Team | Library of atomic tests | GAUNTLET consumes its index as the emulation universe and orders it by CTI |
 | VECTR | Purple-team result tracking | Automatic CTI priority, machine-scored outcomes on recorded telemetry, a CI regression gate |
-| DeTT&CT / ATT&CK Navigator | Manual data-source and coverage scoring | Coverage here is *measured* by replaying attacks, not self-assessed. Output is a Navigator layer |
+| DeTT&CT / ATT&CK Navigator | Manual data-source and coverage scoring | Coverage is *measured* by replay; the gap to tag-claimed coverage is quantified with tests |
 | SigmaHQ regression tests / EVTX-ATTACK-SAMPLES | Rule-level true-positive checks | Technique-level coverage, weighted by threat profile, with off-target burden and ablations |
+| [Dredd](https://github.com/SecurityRiskAdvisors/dredd) (2020) | Replays Mordor through Sigma in Elasticsearch | Publishes no coverage numbers; GAUNTLET adds CIs, CTI weighting and more data sources |
+| [RedGap](https://github.com/befnoz/redgap) (2026) | Benign Linux lab + replay, silent-rule report | Single lab, Linux only, unweighted; GAUNTLET is cross-source (OTRF, Splunk, live) and compares outcomes with it |
+| [CTID Top ATT&CK Techniques](https://github.com/center-for-threat-informed-defense/top-attack-techniques) / [Technique Inference Engine](https://github.com/center-for-threat-informed-defense/technique-inference-engine) | Prevalence/choke-point prioritization; next-technique inference | GAUNTLET's prioritization and prediction are evaluated leave-one-group-out with CIs; its `has_sigma` flags are compared with measured coverage |
 
-GAUNTLET does not reinvent emulation. Its contribution is the reproducible closed loop, and the honest measurement at each stage of it.
+GAUNTLET does not reinvent emulation. Its contribution is measuring, with uncertainty, how far tag-claimed coverage is from what rules actually detect, across recorded and live telemetry, inside a reproducible CTI-to-regression-gate loop.
 
 ## Limitations
 
-- **Small technique universe.** The OTRF recordings cover 54 techniques, skewed toward 2019-2020 Empire/Mimikatz-era credential access and lateral movement. Coverage of 81.5% here does not mean 81.5% of ATT&CK.
-- **Possible rule/data leakage.** Some SigmaHQ rules were written or tuned against these public recordings. The *w/o rules citing OTRF data* column removes rules whose references or description cite OTRF, Security-Datasets or the Threat Hunter Playbook. Coverage drops by 4-6 points. Uncited influence cannot be excluded.
-- **"Off-target" is not a false-positive rate.** The recordings contain lab background activity and adjacent attack steps. The off-target figures are an upper bound on alert burden in one small lab, not a production FP rate.
-- **Ground truth is coarse.** Each recording is labelled with its technique(s) and GAUNTLET scores at recording level, not event level. Family matching (for example T1059 vs T1059.001) is the headline number, with exact-ID coverage shown alongside.
-- **CTI bias.** ATT&CK procedure examples measure *reporting* frequency. That favours well-studied actors and older tradecraft. Profiles are regex-selected from group descriptions: 18 ransomware, 57 espionage, 24 financial and only 4 cloud groups.
-- **Evaluator divergence.** The in-house Sigma evaluator may differ from production backends in edge cases (regex dialect, case-insensitive field names). 35 of 2,554 Windows rules are unsupported (mostly log sources absent from the recordings), and aggregation/correlation rules are not evaluated.
-- **Local AV.** Windows Defender may quarantine 2 recordings that contain attack-tool strings. They are skipped and counted.
+- **Small technique universes.** OTRF covers 55 techniques, skewed toward 2019-2020 Empire/Mimikatz-era tradecraft. 80% there is not 80% of ATT&CK. Splunk adds 188 Windows and 55 Linux techniques, but only from recordings with files of at most 2 MB.
+- **Labels.** OTRF and Splunk are labelled per recording. Only the live job has event-level labels, and it covers 4 benign discovery techniques.
+- **Possible rule/data leakage.** Rules that cite OTRF, Security-Datasets, the Threat Hunter Playbook or the OTRF co-founder's blog and handles are removed in the leakage-controlled column: sigma-core drops from 65.5% to 58.2%. Uncited influence cannot be excluded.
+- **"Off-target" is not a false-positive rate.** It is an upper bound on alert burden in one small lab.
+- **Statistics.** Wilson intervals treat techniques and recordings as independent. The cloud profile (4 groups) cannot distinguish strategies. The cheapest-wins sprint is in-sample, and its out-of-sample check (OTRF to Splunk) shows no transfer.
+- **Evaluator divergence.** The in-house Sigma evaluator may differ from production backends in edge cases. 35 Windows rules are unsupported, and aggregation/correlation rules are not evaluated. auditd has no parent image, so `ParentImage` rules cannot fire on it.
+- **Local AV.** Windows Defender may quarantine OTRF recordings. The published numbers therefore come from a Linux runner.
 
 ## Roadmap
 
-- [x] Real CTI prevalence and profiles (ATT&CK v19.2)
-- [x] Sigma detection scoring on real recorded telemetry
-- [x] ATT&CK Navigator export, cheapest wins, telemetry ablation
-- [x] Research question: CTI vs breadth-first (leave-one-group-out)
-- [x] Technique co-occurrence prediction
-- [x] 95% confidence intervals and paired like-for-like comparisons for every headline number (v1.0.0)
-- [x] Docs site, static coverage explorer, container image and tagged releases (v1.0.0)
-- [ ] Run the ART manifest in the isolated Docker/VM range and replay its Sysmon logs (the loader already accepts JSON-lines events). Needs a Windows lab VM with Sysmon; executing atomics on this workstation is out of scope by design (ADR 0004)
-- [ ] Event-level ground truth (OTRF compound datasets with timelines). Needs per-event human labelling of attacker vs background activity; the public recordings are labelled at recording level only
-- [ ] ML detector (FEINT) as a fourth rule set next to Sigma. Depends on a separate project and a trained model; not in this repo
-- [ ] Red Canary Threat Detection Report weights as an alternative prevalence source. The report publishes no machine-readable, redistributable table; transcribing it by hand needs licence review
-- [ ] Sigma correlation/aggregation rules. The pinned SigmaHQ release ships no Windows correlation rules, so there is nothing to benchmark yet
+- [x] Real CTI prevalence and profiles; Sigma scoring on real telemetry; Navigator export, cheapest wins, telemetry ablation
+- [x] CTI vs breadth-first (leave-one-group-out); co-occurrence prediction; CIs and exact tests
+- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0)
+- [x] OTRF compound and Splunk attack_data sources; claimed vs measured; held-out rule selection
+- [x] Live auditd telemetry with event-level labels (benign allowlist, ADR 0005); published-number comparison
+- [ ] Regression-catch rate across consecutive SigmaHQ releases and rule-mutation testing
+- [ ] Run the ART manifest in an isolated Windows VM range with Sysmon and replay its logs (out of scope on this workstation, ADR 0004)
+- [ ] ML detector (FEINT) as another rule set. FEINT is a network-flow detector, not a host-log detector, so it is out of scope here
+- [ ] Sigma correlation/aggregation rules (the pinned release ships no Windows correlation rules)
 
 ## Lab-only safety note
 
-- GAUNTLET has **no code path that executes an attack technique**. Real-data mode reads recorded logs. Simulation mode emits inert event dicts; a test checks they contain only `.invalid` domains and lab IPs.
-- `gauntlet manifest` prints Atomic Red Team test names and GUIDs marked **DRY RUN**. Run them only inside an isolated, no-egress range that you own (`range/docker-compose.yml` uses an `internal: true` network, `cap_drop: [ALL]` and read-only containers), and never against third-party systems.
+- The `gauntlet` package has **no code path that executes an attack technique**. Real-data mode reads recorded logs. Simulation mode emits inert event dicts, and a test checks that they contain only `.invalid` domains and lab IPs.
+- The `live-telemetry` workflow runs a fixed allowlist of read-only discovery commands (`whoami`, `id`, `uname -a`, `hostname`, `cat /etc/os-release`, `ps -ef`, `crontab -l`, `ls /etc/cron.d`). It runs as the unprivileged user on an ephemeral GitHub-hosted runner, with no network use, credential access, persistence or privilege escalation. The script refuses to run anywhere else ([ADR 0005](docs/adr/0005-benign-live-emulation.md)).
+- `gauntlet manifest` prints Atomic Red Team test names and GUIDs marked **DRY RUN**. Run them only inside an isolated, no-egress range that you own, and never against third-party systems.
 - No malware binaries or exploit code are downloaded or committed. See [ADR 0004](docs/adr/0004-safety-boundary.md), [THREAT_MODEL.md](THREAT_MODEL.md) and [SECURITY.md](SECURITY.md).
 
-## Contributing and licence
+## Contributing, citation and licence
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md). MIT licensed ([LICENSE](LICENSE)). ATT&CK® is a registered trademark of The MITRE Corporation.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CHANGELOG.md](CHANGELOG.md) and [CITATION.cff](CITATION.cff). MIT licensed ([LICENSE](LICENSE)). ATT&CK® is a registered trademark of The MITRE Corporation.

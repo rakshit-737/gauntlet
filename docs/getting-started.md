@@ -1,28 +1,28 @@
 # Getting started
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 
 # Works offline (ATT&CK KB + ART index ship with the package)
-python -m gauntlet profiles                                  # real ATT&CK groups per profile
-python -m gauntlet plan --profile ransomware --top 15        # CTI-prioritized emulation plan
-python -m gauntlet plan --profile APT29,G0007 --top 10       # custom profile from groups
-python -m gauntlet predict --observed T1566.001,T1059.001    # likely next techniques
-python -m gauntlet manifest --profile ransomware --top 10 --out plan.json   # DRY-RUN ART manifest
+gauntlet profiles                                  # real ATT&CK groups per profile
+gauntlet plan --profile ransomware --top 15        # CTI-prioritized emulation plan
+gauntlet plan --profile APT29,G0007 --top 10       # custom profile from groups
+gauntlet predict --observed T1566.001,T1059.001    # likely next techniques
+gauntlet manifest --profile ransomware --top 10 --out out/plan.json   # DRY-RUN ART manifest
 
-# Real data (~117 MB, pinned + SHA-256 verified)
-export GAUNTLET_DATA_DIR=/path/outside/repo                   # default ./data (git-ignored)
+# Real data (~117 MB, pinned + SHA-256 verified; add --only ...,mordor-compound,splunk,published for ~65 MB more)
+export GAUNTLET_DATA_DIR=/path/outside/repo        # default ./data (git-ignored)
 python scripts/download_data.py
-python -m gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
-       --navigator layer.json --json baseline.json            # coverage on real recordings
-python -m gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
-       --baseline baseline.json                               # exit 2 on a coverage regression
-python -m gauntlet bench                                      # full benchmark -> results/
+gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
+       --navigator out/layer.json --json out/baseline.json   # coverage on real recordings
+gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
+       --baseline out/baseline.json                          # exit 2 on a coverage regression
+gauntlet bench --out out                                     # OTRF benchmark
 ```
 
-`make` targets exist (`make data`, `make bench`, `make demo`, `make test`) for systems that have make.
+Exact commands, expected outputs and runtimes for every published number are in [Reproduce](reproduce.md).
 
-Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged):
+Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged, from v1.0.0):
 
 ```text
 Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 groups) through sigma-core ...
@@ -40,20 +40,16 @@ Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 
 Technique coverage: 56%  threat-weighted: 61%  off-target rules/recording: 1.5
 ```
 
-The top-priority gaps are PowerShell (T1059.001), Run keys (T1547.001) and discovery. For T1547.001 the full SigmaHQ set *does* detect both recordings, but only with medium-level rules that the *core* filter drops. That is exactly the kind of trade-off the coverage matrix is meant to surface.
+The 56% is over the 18 techniques labelled on the 33 chosen recordings, which include 3 co-labelled techniques beyond the 15 prioritized ones; over the 15 prioritized techniques alone it is 9/15 = 60%. For T1547.001 the full SigmaHQ package *does* detect both recordings, but only with medium-level rules that the *core* filter drops.
 
-Load `layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to view coverage as a heatmap: green = detected, amber = partial, red = missed.
+Load `out/layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to view coverage as a heatmap: green = detected, amber = partial, red = missed.
 
 ## Docker
 
 ```bash
 docker run --rm ghcr.io/rakshit-737/gauntlet:latest plan --profile ransomware --top 10
-# real data: mount a data dir
-docker run --rm -v $PWD/data:/data -e GAUNTLET_DATA_DIR=/data ghcr.io/rakshit-737/gauntlet:latest bench
+# real data: mount a data dir and an output dir
+docker run --rm -v "$PWD/data:/data" -v "$PWD/out:/home/gauntlet/results" ghcr.io/rakshit-737/gauntlet:latest bench
 ```
 
-## Reproducibility
-
-- Every source is pinned (git commit for OTRF and Atomic Red Team, release tag for SigmaHQ, versioned file name for ATT&CK) and verified against [`scripts/checksums.sha256`](https://github.com/rakshit-737/gauntlet/blob/main/scripts/checksums.sha256).
-- `python -m gauntlet bench` is deterministic. Random baselines use fixed seeds, 30 per held-out group. Replay results are cached under `$GAUNTLET_DATA_DIR/cache`. A cold run takes about 25 minutes on a 16-core laptop; a cached re-run takes about a minute.
-- CI (`.github/workflows/ci.yml`) runs ruff and the 78 offline tests on Python 3.10/3.12/3.13 without downloads; the 2 `@pytest.mark.realdata` tests are skipped there and pass locally once the data is present.
+See [Reproduce](reproduce.md) for runtimes and expected outputs, and [Evaluation](evaluation.md) for what the numbers mean.

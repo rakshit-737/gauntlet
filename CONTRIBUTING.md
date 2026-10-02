@@ -4,7 +4,9 @@ Thanks for helping make threat-informed defense measurable.
 
 ## Ground rules
 
-- **Safety first.** GAUNTLET never executes attack techniques. PRs that add code
+- **Safety first.** The `gauntlet` package never executes attack techniques; the only
+  execution is the allowlisted benign live job in CI ([ADR 0005](docs/adr/0005-benign-live-emulation.md)),
+  and changes to its allowlist need maintainer review. PRs that add code
   paths that run payloads, download binaries/malware, or reach anything other
   than localhost / your own isolated range will be closed. See
   [ADR 0004](docs/adr/0004-safety-boundary.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
@@ -12,7 +14,8 @@ Thanks for helping make threat-informed defense measurable.
   SHA-256 in `scripts/checksums.sha256`) and commit only small derived artefacts
   (< 1 MB) or tiny test fixtures.
 - **Honest numbers.** Benchmark changes must regenerate `results/` with
-  `python -m gauntlet bench` and explain any movement in the PR description.
+  the `benchmark` workflow (or `python -m gauntlet bench`) and explain any movement in the PR
+  description, including numbers that got worse.
 
 ## Dev setup
 
@@ -23,13 +26,20 @@ python -m pytest -q          # offline; real-data tests auto-skip without downlo
 python -m ruff check .
 ```
 
-Optional real data (~115 MB):
+Optional real data (~117 MB default, ~182 MB with all sources):
 
 ```bash
 export GAUNTLET_DATA_DIR=/path/outside/repo      # default: ./data (git-ignored)
 python scripts/download_data.py
 python -m pytest -q -m realdata
 python -m gauntlet bench
+```
+
+## Docs
+
+```bash
+pip install -r requirements-docs.txt -e .
+mkdocs serve        # an MkDocs hook copies results/ into the site; no separate prepare step
 ```
 
 ## Where things live
@@ -53,4 +63,4 @@ semantics (case sensitivity, wildcard handling, list/all behaviour).
 ## Commits and PRs
 
 Conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `data:`, `perf:`,
-`refactor:`, `ci:`), small and logical. CI (pytest on 3.10-3.13 + ruff) must be green.
+`refactor:`, `ci:`), small and logical. CI (pytest on 3.10-3.14, ruff, wheel/sdist/container smoke tests, pip-audit, gitleaks) must be green.

@@ -17,9 +17,11 @@ theme:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
+  - How it works: how-it-works.md
+  - Evaluation: evaluation.md
+  - Reproduce: reproduce.md
   - Architecture: architecture.md
   - Datasets: DATASETS.md
-  - Benchmarks: benchmarks.md
   - Coverage explorer (demo): demo/index.html
   - CLI & API reference: reference.md
   - Threat model: threat-model.md
@@ -30,6 +32,7 @@ nav:
       - adr/0002-sigma-evaluator.md
       - adr/0003-cti-prioritization-from-attack-groups.md
       - adr/0004-safety-boundary.md
+      - adr/0005-benign-live-emulation.md
   - Changelog: changelog.md
   - Limitations & roadmap: limitations.md
 hooks:
@@ -38,6 +41,8 @@ markdown_extensions:
   - admonition
   - md_in_html
   - pymdownx.magiclink
+  - pymdownx.tabbed:
+      alternate_style: true
   - tables
   - attr_list
   - pymdownx.snippets:

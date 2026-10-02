@@ -3,6 +3,41 @@
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Added
+- `gauntlet/formats.py`: XML event (Splunk, Sysmon for Linux) and raw auditd parsing, with a
+  synthetic process-creation view from SYSCALL+EXECVE+CWD; Linux Sigma logsources (`sigma-linux`).
+- Data: OTRF compound LSASS campaigns and Splunk attack_data (committed manifest, LFS-oid verified).
+- `gauntlet extended`: cross-dataset benchmark and claimed-vs-measured coverage with gap classes
+  and exact McNemar tests; held-out rule selection (pick on OTRF, test on Splunk).
+- `gauntlet live` + `live-telemetry` workflow: allowlisted benign discovery commands under auditd on
+  an ephemeral runner, event-level labels, compared with replayed Splunk recordings (ADR 0005).
+- `gauntlet compare`: CTID `has_sigma` and RedGap published outcomes vs measured coverage.
+- `benchmark` workflow: cold, clean-Linux run that produces the committed `results/`.
+- CLI `--version`, help text with defaults, `bench --no-cache`.
+- Repo: dependabot, CODEOWNERS, issue/PR templates, CITATION.cff, pip-audit and gitleaks in CI,
+  wheel/sdist/container smoke tests, Python 3.10-3.14 matrix.
+
+### Changed
+- Published results now come from a clean Linux runner: 98 OTRF recordings / 55 techniques (was
+  96 / 54 with 2 recordings quarantined by local AV). **Numbers got slightly worse**: sigma-core
+  66.7% to 65.5%, sigma-all 81.5% to 80.0%; sprint 35.2% to 34.5%.
+- Leakage filter broadened (OTRF co-founder blog/handles): sigma-core leakage-controlled coverage
+  58.2% (was 61.1% with the narrow filter on 96 recordings).
+- Cloud-profile comparisons (n = 4 groups) report per-group differences and an exact sign test
+  instead of bootstrap CIs; they are not statistically distinguishable (p = 0.125).
+- Recall curves cover the full 266-technique universe; the figure marks the 80% crossing.
+- Replay cache keyed by a fingerprint of rules and evaluator code.
+
+### Fixed
+- Installed wheel and container loaded 0 legacy rules and reported 0% (rules now package data;
+  data/results default to the working directory; empty rule dirs raise).
+- Release notes are taken from this file (the awk pattern never matched).
+- Downloader: verify before install, discard mismatches, refuse paths outside the data dir,
+  remember AV-quarantined files, pin ATT&CK to a commit, no token on redirects.
+- Parser ReDoS / argc-driven allocation on malformed input.
+
 ## [1.0.0] - 2026-09-26
 
 ### Added
@@ -16,7 +51,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 - README: CIs on headline numbers; the ransomware CTI-vs-prevalence gap (8.0 steps, CI 3.9-12.2)
-  is now shown to be real, espionage/financial ties confirmed, cloud favours prevalence.
+  is now shown to be real, espionage/financial ties confirmed. (The v1.0.0 note "cloud favours
+  prevalence" was withdrawn in the next release: with 4 groups it is not significant.)
 - Mermaid labels quoted so the diagram renders on GitHub and the docs site.
 
 ## [0.2.0] - 2026-09-26

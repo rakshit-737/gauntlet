@@ -1,7 +1,7 @@
 # Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph CTI["CTI - MITRE ATT&CK v19.2"]
     KB["attack.py<br/>STIX to KB, revoked-id map"]
   end
@@ -10,7 +10,9 @@ flowchart LR
   KB --> PRED["predict.py<br/>co-occurrence next-technique"]
   PR --> PLAN["atomics.py<br/>dry-run ART manifest"]
   PR --> SEL["recordings for<br/>prioritized techniques"]
-  OTRF[("OTRF Security-Datasets<br/>recorded Windows telemetry")] --> SEL
+  OTRF[("OTRF atomic + compound,<br/>Splunk attack_data")] --> SEL
+  LIVE[("live auditd, CI runner<br/>event-level labels")] --> FMT["formats.py<br/>JSON / XML / auditd parsing"]
+  FMT --> RP
   SEL --> RP["replay.py<br/>channel/EventID-indexed replay<br/>process pool + cache"]
   SIG[("SigmaHQ rules")] --> SE["sigma.py<br/>Sigma evaluator"]
   SE --> RP
@@ -18,6 +20,7 @@ flowchart LR
   COV --> NAV["ATT&CK Navigator layer"]
   COV --> REP["results/ + figures"]
   COV --> REG["regression gate<br/>--baseline, exit 2"]
+  COV --> EXT["extended.py / live.py<br/>claimed vs measured,<br/>published comparison"]
   SIM["offline simulation<br/>cti/plans/range_sim"] -.-> REG
 ```
 
@@ -27,6 +30,8 @@ flowchart LR
 | `prioritize.py` | Builds profiles from real groups (regex over group descriptions or explicit IDs) and ranks with the `cti`, `relevance`, `prevalence`, `breadth` and `random` strategies. Includes the leave-one-group-out evaluation |
 | `sigma.py` | Evaluates SigmaHQ YAML directly. Supports the full condition grammar (except aggregations), 20+ modifiers, Sysmon/Security-4688/PowerShell logsource and field mapping. Anything unsupported is reported, never silently ignored |
 | `mordor.py`, `replay.py` | Load OTRF recordings (zip or tar.gz, JSON lines) and replay them through a rule set indexed by `(channel, EventID)`, in parallel and cached |
+| `formats.py` | Parses XML event lines (Splunk, Sysmon for Linux) and raw auditd, and synthesises process-creation events from SYSCALL+EXECVE+CWD |
+| `extended.py`, `live.py`, `published.py` | Cross-dataset claimed-vs-measured analysis, live auditd scoring with event-level labels, and comparison with CTID/RedGap published numbers |
 | `coverage.py` | Scores family and exact-ID matches, off-target alert burden, threat-weighted coverage, greedy cheapest-win rules and channel ablation, and exports ATT&CK Navigator 4.5 layers |
 | `predict.py` | Item-item cosine co-occurrence model with leave-one-group-out evaluation against a popularity baseline |
 | `atomics.py` | Atomic Red Team Windows index and a DRY-RUN manifest in priority order |
