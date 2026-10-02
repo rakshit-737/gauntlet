@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GAUNTLET coverage explorer</title>
 <style>
@@ -24,7 +25,8 @@ svg text{fill:var(--fg);font-size:11px}.legend span{margin-right:12px;font-size:
 <main>
 <p><a href="../">&larr; GAUNTLET docs</a></p>
 <h1>Coverage explorer</h1>
-<p class="sub">Static view of the committed benchmark: 96 OTRF Security-Datasets recordings replayed through three rule sets. Nothing is executed; the page only reads <code>results/*.json</code>.</p>
+<p class="sub" id="sub">Static view of the committed benchmark. Nothing is executed; the page only reads <code>results/*.json</code>.</p>
+<p id="err" role="alert" hidden></p>
 <div class="controls">
   <label>Rule set <select id="rs"><option value="sigma-core">SigmaHQ core</option><option value="sigma-all">SigmaHQ all</option><option value="legacy">v0.1 baseline</option></select></label>
   <label>Filter <input id="q" placeholder="T1059, discovery, missed..."></label>
@@ -42,10 +44,13 @@ svg text{fill:var(--fg);font-size:11px}.legend span{margin-right:12px;font-size:
 <script>
 const $ = id => document.getElementById(id);
 const pct = x => (100 * x).toFixed(1) + "%";
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TID = /^T\d{4}(\.\d{3})?$/;
+const OUTCOMES = new Set(["detected","partial","missed"]);
+async function getJSON(u){ const r = await fetch(u); if(!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); }
 const COLORS = {cti:"#1565c0",relevance:"#6a1b9a",prevalence:"#00838f",breadth:"#ef6c00",random:"#888"};
 let summary = null; const cov = {};
-async function load(name){ if(!cov[name]) cov[name] = await (await fetch(`data/coverage-${name}.json`)).json(); return cov[name]; }
+async function load(name){ if(!cov[name]) cov[name] = await getJSON(`data/coverage-${name}.json`); return cov[name]; }
 async function render(){
   const d = await load($("rs").value), q = $("q").value.trim().toLowerCase();
   const ci = d.ci95 || {};
@@ -53,15 +58,17 @@ async function render(){
   $("kpis").innerHTML = [
     ["Technique coverage", pct(d.technique_coverage) , f(ci.technique_coverage)],
     ["Recordings detected", pct(d.dataset_recall), f(ci.dataset_recall)],
-    ["Rules", d.rules, ""],
-    ["Off-target alerts / 10k events", d.off_target_alerts_per_10k_events, ""]].map(
+    ["Fully detected", pct(d.fully_detected_coverage ?? 0), f(ci.fully_detected_coverage)],
+    ["Rules", esc(d.rules), ""],
+    ["Off-target alerts / 10k events", esc(d.off_target_alerts_per_10k_events), ""]].map(
     ([k,v,c]) => `<div class="kpi"><b>${v}</b><span>${k}</span>${c}</div>`).join("");
   $("tactics").innerHTML = "<tr><th>Tactic</th><th>Covered</th><th></th></tr>" + Object.entries(d.by_tactic).map(([t,v]) =>
     `<tr><td>${esc(t)}</td><td class="num">${v.covered}/${v.total}</td><td><div class="bar"><i style="width:${100*v.covered/v.total}%"></i></div></td></tr>`).join("");
   const rows = d.results.filter(r => !q || [r.technique,r.name,r.tactic,r.outcome,...r.rules].join(" ").toLowerCase().includes(q));
   $("techs").innerHTML = "<tr><th>Technique</th><th>Tactic</th><th>Result</th><th>Recordings</th><th>Detections</th></tr>" + rows.map(r =>
-    `<tr><td><a href="https://attack.mitre.org/techniques/${r.technique.replace(".","/")}/">${esc(r.technique)}</a> ${esc(r.name)}</td><td>${esc(r.tactic)}</td>`+
-    `<td><span class="pill ${r.outcome}">${r.outcome}</span></td><td class="num">${r.detected}/${r.datasets}</td><td>${r.rules.map(esc).join("; ")||"-"}</td></tr>`).join("");
+    `<tr><td>${TID.test(r.technique) ? `<a href="https://attack.mitre.org/techniques/${r.technique.replace(".","/")}/">${esc(r.technique)}</a>` : esc(r.technique)} ${esc(r.name)}</td><td>${esc(r.tactic)}</td>`+
+    `<td><span class="pill ${OUTCOMES.has(r.outcome) ? r.outcome : ""}">${esc(r.outcome)}</span></td><td class="num">${esc(r.detected)}/${esc(r.datasets)}</td><td>${r.rules.map(esc).join("; ")||"-"}</td></tr>`).join("")
+    + (rows.length ? "" : `<tr><td colspan="5">No techniques match "${esc(q)}".</td></tr>`);
 }
 function curve(){
   const p = summary.prioritization[$("prof").value], W=640,H=300,L=40,B=30,T=10,R=10;
@@ -69,17 +76,26 @@ function curve(){
   const x = i => L + (W-L-R)*i/(n-1), y = v => H-B - (H-B-T)*v;
   let s = `<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="currentColor" opacity=".3"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="currentColor" opacity=".3"/>`;
   for (const v of [0,.25,.5,.75,1]) s += `<text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
-  for (const i of [0,24,49,74,99]) if (i<n) s += `<text x="${x(i)}" y="${H-B+16}" text-anchor="middle">${i+1}</text>`;
+  const step = n > 150 ? 50 : 25;
+  for (let i = 0; i < n; i += step) s += `<text x="${x(i)}" y="${H-B+16}" text-anchor="middle">${i || 1}</text>`;
+  s += `<line x1="${L}" y1="${y(.8)}" x2="${W-R}" y2="${y(.8)}" stroke="currentColor" stroke-dasharray="4 4" opacity=".5"/><text x="${W-R}" y="${y(.8)-4}" text-anchor="end">80%</text>`;
   s += `<text x="${(W+L)/2}" y="${H-2}" text-anchor="middle">techniques emulated</text>`;
-  for (const [k,c] of Object.entries(cs)) s += `<polyline fill="none" stroke="${COLORS[k]||"#999"}" stroke-width="2" points="${c.map((v,i)=>x(i)+","+y(v)).join(" ")}"/>`;
+  for (const [k,c] of Object.entries(cs)) if (COLORS[k]) s += `<polyline fill="none" stroke="${COLORS[k]}" stroke-width="2" points="${c.map((v,i)=>x(i)+","+y(v)).join(" ")}"/>`;
   $("curve").innerHTML = s;
-  $("legend").innerHTML = Object.keys(cs).map(k=>`<span style="color:${COLORS[k]}">&#9632;</span> ${k}`).join(" ") + ` &middot; ${p.groups_evaluated} held-out groups`;
+  $("legend").innerHTML = Object.keys(cs).filter(k=>COLORS[k]).map(k=>`<span style="color:${COLORS[k]}">&#9632;</span> ${esc(k)}`).join(" ") + ` &middot; ${esc(p.groups_evaluated)} held-out groups`;
 }
 (async () => {
-  summary = await (await fetch("data/results.json")).json();
-  $("prof").innerHTML = Object.keys(summary.prioritization).map(p=>`<option>${p}</option>`).join("");
-  $("rs").onchange = render; $("q").oninput = render; $("prof").onchange = curve;
-  render(); curve();
+  try {
+    summary = await getJSON("data/results.json");
+    $("sub").textContent = `Static view of the committed benchmark: ${summary.recordings} OTRF Security-Datasets recordings ` +
+      `(${summary.recorded_techniques} ATT&CK techniques) replayed through three rule sets. Nothing is executed; the page only reads results/*.json.`;
+    $("prof").innerHTML = Object.keys(summary.prioritization).map(p=>`<option>${esc(p)}</option>`).join("");
+    $("rs").onchange = render; $("q").oninput = render; $("prof").onchange = curve;
+    await render(); curve();
+  } catch (e) {
+    $("err").hidden = false;
+    $("err").textContent = `Could not load benchmark data (${e.message}). Build the docs with mkdocs, which copies results/ into docs/demo/data/.`;
+  }
 })();
 </script>
 </body>

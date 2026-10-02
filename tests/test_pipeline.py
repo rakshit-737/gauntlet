@@ -87,7 +87,7 @@ def test_evaluate_logo_on_shipped_kb():
     assert set(s) == set(prioritize.STRATEGIES)
     # CTI-driven orderings must beat breadth-first on held-out actors
     assert s["cti"]["auc"] > s["breadth"]["auc"]
-    assert len(res["mean_curves"]["cti"]) == 100
+    assert len(res["mean_curves"]["cti"]) == res["universe"]  # full curve, so the 80% crossing is visible
     # paired, like-for-like CI over held-out groups: CTI needs fewer steps than breadth-first
     d = res["paired"]["cti_minus_breadth"]["steps_to_80%"]
     assert d["n"] == res["groups_evaluated"] and d["ci95"][1] < 0

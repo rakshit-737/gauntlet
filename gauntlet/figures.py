@@ -42,7 +42,7 @@ def tactic_coverage(summaries: dict[str, Any], out: Path) -> Path:
     ax.set_xlabel("techniques with an on-target detection (%)", color=MUTED, fontsize=9)
     ax.set_title("Detection coverage per ATT&CK tactic on OTRF recordings", color=INK, fontsize=11, loc="left")
     _style(ax)
-    ax.legend(frameon=False, fontsize=9, loc="lower right")
+    ax.legend(frameon=False, fontsize=9, loc="upper left", bbox_to_anchor=(1.01, 1))
     fig.tight_layout()
     p = out / "tactic_coverage.png"
     fig.savefig(p)
@@ -60,6 +60,11 @@ def prioritization_curves(report: dict[str, Any], out: Path, profile: str = "ran
             continue
         xs = range(1, len(c) + 1)
         ax.plot(xs, [100 * v for v in c], color=SERIES[i], linewidth=2, label=s)
+        hit = next((k for k, v in enumerate(c, 1) if v >= 0.8), None)
+        if hit:
+            ax.plot([hit], [80], marker="o", color=SERIES[i], markersize=5)
+    ax.axhline(80, color=MUTED, linewidth=1, linestyle="--")
+    ax.text(2, 81.5, "80% of the held-out actor's techniques", color=MUTED, fontsize=8)
     ax.set_xlabel("techniques emulated (in priority order)", color=MUTED, fontsize=9)
     ax.set_ylabel("held-out actor's techniques covered (%)", color=MUTED, fontsize=9)
     ax.set_ylim(0, 100)
@@ -67,7 +72,7 @@ def prioritization_curves(report: dict[str, Any], out: Path, profile: str = "ran
                  f"(leave-one-group-out, n={d['groups_evaluated']})", color=INK, fontsize=10, loc="left")
     _style(ax)
     ax.grid(axis="y", color=GRID, linewidth=0.8)
-    ax.legend(frameon=False, fontsize=9, loc="upper left")
+    ax.legend(frameon=False, fontsize=9, loc="lower right")
     fig.tight_layout()
     p = out / f"prioritization_{profile}.png"
     fig.savefig(p)

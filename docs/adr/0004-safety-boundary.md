@@ -1,6 +1,7 @@
-# ADR 0004 - Safety boundary: GAUNTLET never executes attack techniques
+# ADR 0004 - Safety boundary: the GAUNTLET package never executes attack techniques
 
-- Status: accepted
+- Status: accepted (amended by [ADR 0005](0005-benign-live-emulation.md): one CI job runs
+  allowlisted benign discovery commands on an ephemeral runner)
 - Date: 2026-09-26
 
 ## Decision

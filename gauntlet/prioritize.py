@@ -116,8 +116,24 @@ def steps_to(curve: Sequence[float], level: float) -> int:
     return len(curve) + 1
 
 
+SMALL_N = 10  # below this many held-out groups a percentile bootstrap CI is not meaningful
+
+
+def _paired(a: list[float], b: list[float]) -> dict:
+    """Paired bootstrap CI plus an exact sign test; with < SMALL_N units the CI is flagged unreliable
+    and the per-unit differences are reported instead."""
+    out = stats.paired_bootstrap_ci(a, b)
+    diffs = [round(x - y, 4) for x, y in zip(a, b, strict=True)]
+    nz = [d for d in diffs if d != 0]
+    out["sign_test_p"] = round(stats.binom_two_sided(sum(d > 0 for d in nz), len(nz)), 4)
+    out["ci_reliable"] = len(diffs) >= SMALL_N
+    if len(diffs) < SMALL_N:
+        out["per_unit_diffs"] = diffs
+    return out
+
+
 def evaluate_logo(kb: KnowledgeBase, profile: str, universe: set[str], ks=(10, 25, 50),
-                  random_seeds: int = 30, min_target: int = 5, curve_len: int = 100) -> dict:
+                  random_seeds: int = 30, min_target: int = 5, curve_len: int = 300) -> dict:
     """Leave-one-group-out evaluation of prioritization strategies.
 
     For each group g in the profile: relevance is computed from the *other*
@@ -161,8 +177,7 @@ def evaluate_logo(kb: KnowledgeBase, profile: str, universe: set[str], ks=(10, 2
     if n_eval:
         for other in ("breadth", "prevalence", "random"):
             paired[f"cti_minus_{other}"] = {
-                k: stats.paired_bootstrap_ci(per_group["cti"][k], per_group[other][k])
-                for k in ("steps_to_80%", "auc")}
+                k: _paired(per_group["cti"][k], per_group[other][k]) for k in ("steps_to_80%", "auc")}
     mean_curves = {s: [round(statistics.fmean(c[i] for c in cs), 4) for i in range(min(map(len, cs)))]
                    for s, cs in curves.items() if cs}
     return {"profile": profile, "groups_in_profile": len(groups), "groups_evaluated": n_eval,

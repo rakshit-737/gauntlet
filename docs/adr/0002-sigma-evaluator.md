@@ -31,6 +31,6 @@ rules are unsupported (mostly logsources with no equivalent in the recordings).
 
 - Semantics are pinned by unit tests per modifier and condition form.
 - Rules are indexed by (channel, EventID) so a replay of ~100 recordings
-  against ~2,200 rules runs in minutes on a laptop with a process pool.
+  against the ~2,500 Windows rules evaluated (~2,200 when this ADR was written) runs in minutes on a laptop with a process pool.
 - Divergence from a production backend is possible in edge cases (regex
   dialect, field-name case folding: we match field names case-insensitively).

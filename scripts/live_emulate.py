@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -52,7 +53,11 @@ def main(out: str = "live-out/labels.json") -> int:
     rows = []
     for argv, tech in ALLOWLIST:
         t = time.time()
-        p = subprocess.Popen(list(argv), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False)  # noqa: S603
+        exe = shutil.which(argv[0])  # absolute path: one execve, not one failed attempt per PATH entry
+        if exe is None:
+            rows.append({"argv": list(argv), "technique": tech, "pid": None, "start": t, "returncode": None})
+            continue
+        p = subprocess.Popen([exe, *argv[1:]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False)  # noqa: S603
         try:
             rc = p.wait(timeout=20)
         except subprocess.TimeoutExpired:
