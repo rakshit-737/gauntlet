@@ -1,6 +1,6 @@
 # GAUNTLET
 
-**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns**.
+**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed at family level vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns** for the full SigmaHQ release package (sigma-all; 38-64 points for sigma-full; the compound sample is 13 techniques).
 
 It also ranks techniques by what real ATT&CK groups do (CTI prioritization), turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data.
 
@@ -37,11 +37,9 @@ python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activa
 pip install "git+https://github.com/rakshit-737/gauntlet@main"
 gauntlet plan --profile ransomware --top 10       # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5
-# or, with no Python at all:
-docker run --rm ghcr.io/rakshit-737/gauntlet:latest plan --profile ransomware --top 10
 ```
 
-The distribution name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Install from this repository, or use the release wheel or the container image.
+The distribution name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Install from this repository. The published container image and v1.0.0 wheel predate current fixes (rules path, bench output) and are not recommended until the next release.
 
 <div class="grid cards" markdown>
 

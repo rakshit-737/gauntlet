@@ -46,10 +46,6 @@ Load `out/layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https:
 
 ## Docker
 
-```bash
-docker run --rm ghcr.io/rakshit-737/gauntlet:latest plan --profile ransomware --top 10
-# real data: mount a data dir and an output dir
-docker run --rm -v "$PWD/data:/data" -v "$PWD/out:/home/gauntlet/results" ghcr.io/rakshit-737/gauntlet:latest bench
-```
+The container image `ghcr.io/rakshit-737/gauntlet:latest` was built from v1.0.0, which resolves rules inside site-packages (`sim` reports 0%) and writes `bench` output into site-packages. Do not use it until the next release rebuilds the image; install from `@main` as above instead.
 
 See [Reproduce](reproduce.md) for runtimes and expected outputs, and [Evaluation](evaluation.md) for what the numbers mean.
