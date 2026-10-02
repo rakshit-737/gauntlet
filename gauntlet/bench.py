@@ -31,7 +31,7 @@ CHANNELS = ("microsoft-windows-sysmon/operational", "security",
 
 def ruleset_spec(name: str, root: Path) -> str:
     if name == "legacy":
-        return f"legacy:{paths.REPO / 'rules'}"
+        return f"legacy:{paths.LEGACY_RULES}"
     return f"{name}:{paths.sigma_zip(root)}"
 
 
@@ -43,7 +43,7 @@ def _kb(root: Path) -> KnowledgeBase:
 def run(root: Path | None = None, out: Path | None = None, workers: int | None = None,
         rulesets: tuple[str, ...] = RULESETS, figures: bool = True) -> dict[str, Any]:
     root = root or paths.data_dir()
-    out = out or paths.REPO / "results"
+    out = out or Path.cwd() / "results"
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     kb = _kb(root)

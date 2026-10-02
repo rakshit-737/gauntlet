@@ -34,8 +34,11 @@ def load_rule(d: dict[str, Any]) -> Rule:
 
 
 def load_rules(directory: str | Path) -> list[Rule]:
-    return [load_rule(json.loads(p.read_text(encoding="utf-8")))
-            for p in sorted(Path(directory).glob("*.json"))]
+    """Load every ``*.json`` rule in ``directory``; raise if there are none (avoids silent 0% coverage)."""
+    files = sorted(Path(directory).glob("*.json"))
+    if not files:
+        raise FileNotFoundError(f"no *.json rules in {directory}")
+    return [load_rule(json.loads(p.read_text(encoding="utf-8"))) for p in files]
 
 
 def _match_value(actual: Any, mod: str | None, expected: Any) -> bool:

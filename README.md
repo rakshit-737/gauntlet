@@ -40,7 +40,7 @@ Brackets: 95% Wilson intervals. With only 54 techniques and 96 recordings, the i
 | SigmaHQ *core* (stable/test, high/critical) | 1,365 | **66.7%** [53.4, 77.8] | 57.4% | 61.1% | 53.1% [43.2, 62.8] | 11.2 |
 | SigmaHQ *all* Windows rules | 2,519 | **81.5%** [69.2, 89.6] | 66.7% | 77.8% | 69.8% [60.0, 78.1] | 53.7 |
 
-The baseline is 6 of the 7 v0.1 rules in `rules/`. The password-spray rule is a count threshold with no Sigma equivalent here, so it is not replayed.
+The baseline is 6 of the 7 v0.1 rules in `gauntlet/data/rules/`. The password-spray rule is a count threshold with no Sigma equivalent here, so it is not replayed.
 
 - **Coverage sprint.** The v0.1 baseline covers 5.6% of recorded techniques. Adding only the **10 greedily chosen "cheapest-win" Sigma rules** takes it to **35.2%**, or 44.6% when weighted by the ransomware profile.
 - **Precision cost.** Going from *core* to *all* adds 15 points of coverage and roughly 5x the off-target alerts (11 to 54 per 10k events).

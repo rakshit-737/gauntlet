@@ -15,7 +15,7 @@ from . import atomics, cti, detect, paths, plans, prioritize, range_sim, score
 from .attack import load_kb
 from .models import CoverageReport, Outcome
 
-DEFAULT_RULES = Path(__file__).resolve().parent.parent / "rules"
+DEFAULT_RULES = paths.LEGACY_RULES
 _ICON = {Outcome.DETECTED: "[+]", Outcome.PARTIAL: "[~]", Outcome.MISSED: "[-]"}
 
 
@@ -247,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("--navigator", type=Path, help="write an ATT&CK Navigator layer here")
     pr.add_argument("--baseline", type=Path, help="exit 2 if coverage regressed vs this JSON")
     pb = sub.add_parser("bench", help="full real-data benchmark -> results/")
-    pb.add_argument("--out", type=Path, default=paths.REPO / "results")
+    pb.add_argument("--out", type=Path, default=Path("results"))
     pb.add_argument("--workers", type=int)
     pb.add_argument("--rulesets", default="legacy,sigma-core,sigma-all")
     pb.add_argument("--no-figures", action="store_true")

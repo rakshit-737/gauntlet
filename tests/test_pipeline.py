@@ -158,7 +158,7 @@ def test_replay_many_parallel_and_cache(mini_data):
 
 
 def test_legacy_rules_run_on_real_style_events(mini_data):
-    rules = replay.load_ruleset(f"legacy:{paths.REPO / 'rules'}")
+    rules = replay.load_ruleset(f"legacy:{paths.LEGACY_RULES}")
     ids = {r.id for r in rules}
     assert "lsass_access" in ids and "password_spray" not in ids   # threshold/auth rules not adaptable
     idx = replay.RuleIndex(rules)

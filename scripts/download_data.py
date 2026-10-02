@@ -11,6 +11,13 @@ Sources (see docs/DATASETS.md for licences and citations):
   * OTRF Security-Datasets (Mordor) Windows *atomic* host
     recordings + metadata, pinned commit                      ~60 MB
   * Red Canary Atomic Red Team Windows test index (CSV)       ~0.2 MB
+  * OTRF Security-Datasets *compound* LSASS campaigns (7 multi-
+    technique Windows host recordings), same pinned commit       ~22 MB
+  * Splunk attack_data, pinned commit: every recording under
+    datasets/attack_techniques whose Windows XML event logs or
+    Linux sysmon/auditd logs are all <= 2 MB (manifest committed
+    as scripts/splunk_attack_data.json; each file verified
+    against its git-LFS sha256 oid)                           ~46 MB
 
 Nothing here is executable attack tooling: the datasets are recorded Windows
 event logs (JSON), YAML detection rules, a STIX JSON knowledge base and a CSV
@@ -34,6 +41,13 @@ ATTACK_VERSION = "19.2"
 SIGMA_TAG = "r2026-07-01"
 OTRF_SHA = "d9d40ef123d2c87d5d3df28c96bcab4f0faccc87"
 ART_SHA = "388942adbd9641f4dfdcf079d7efe9a75ec0ac43"
+SPLUNK_SHA = "b4573ed3b6bf05473b01048dd36380dbd52288c0"
+SPLUNK_RAW = f"https://raw.githubusercontent.com/splunk/attack_data/{SPLUNK_SHA}/"
+SPLUNK_LFS = f"https://media.githubusercontent.com/media/splunk/attack_data/{SPLUNK_SHA}/"
+SPLUNK_TREE = f"https://api.github.com/repos/splunk/attack_data/git/trees/{SPLUNK_SHA}?recursive=1"
+SPLUNK_MANIFEST = Path(__file__).resolve().parent / "splunk_attack_data.json"
+SPLUNK_MAX_BYTES = 2_000_000
+SPLUNK_SOURCETYPES = ("sysmon:linux", "auditd")  # plus every XmlWinEventLog* sourcetype
 
 ATTACK_URL = ("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/"
               f"enterprise-attack/enterprise-attack-{ATTACK_VERSION}.json")
@@ -195,7 +209,93 @@ def get_mordor(f: Fetcher) -> None:
     print(f"  {len(metas)} metadata files, {n_files} host recordings")
 
 
-SOURCES = {"attack": get_attack, "sigma": get_sigma, "art": get_art, "mordor": get_mordor}
+def get_mordor_compound(f: Fetcher) -> None:
+    """OTRF compound LSASS campaigns: multi-technique host recordings with ATT&CK metadata."""
+    print("[mordor-compound] OTRF Security-Datasets compound LSASS campaigns", OTRF_SHA[:10])
+    import yaml
+
+    for i in range(1, 8):
+        name = f"LSASS_campaign_{i:02d}"
+        p = f.fetch(OTRF_RAW + f"datasets/compound/_metadata/{name}.yaml", f"mordor-compound/_metadata/{name}.yaml")
+        meta = yaml.safe_load(p.read_text(encoding="utf-8"))
+        for file in meta.get("files") or []:
+            if str(file.get("type", "")).lower() == "host":
+                path = file["link"].split("/master/", 1)[-1]
+                f.fetch(OTRF_RAW + path, "mordor-compound/" + path.split("datasets/compound/", 1)[1])
+
+
+def build_splunk_manifest() -> dict:
+    """Select Splunk attack_data recordings (pinned commit) and record each file's LFS oid/size."""
+    import re
+    from concurrent.futures import ThreadPoolExecutor
+
+    import yaml
+
+    tree = json.loads(_get(SPLUNK_TREE))["tree"]
+    ymls = [t["path"] for t in tree if t["path"].startswith("datasets/attack_techniques/")
+            and t["path"].endswith(".yml")]
+
+    def meta(p: str):
+        try:
+            return p, yaml.safe_load(_get(SPLUNK_RAW + p).decode("utf-8", "replace")) or {}
+        except Exception:  # noqa: BLE001 - malformed upstream yml -> skip
+            return p, {}
+
+    with ThreadPoolExecutor(16) as ex:
+        metas = list(ex.map(meta, ymls))
+    cands = []
+    for p, m in metas:
+        files = [d for d in m.get("datasets") or [] if isinstance(d, dict) and (
+            str(d.get("sourcetype", "")).startswith("XmlWinEventLog") or d.get("sourcetype") in SPLUNK_SOURCETYPES)]
+        techs = [str(t).upper() for t in m.get("mitre_technique") or [] if str(t).upper().startswith("T")]
+        if files and techs:
+            cands.append((p, m, files, techs))
+
+    def pointer(path: str):
+        try:
+            txt = _get(SPLUNK_RAW + path).decode("utf-8", "replace")[:400]
+        except Exception:  # noqa: BLE001
+            return path, None, None
+        oid, size = re.search(r"sha256:([0-9a-f]{64})", txt), re.search(r"size (\d+)", txt)
+        return path, oid and oid.group(1), size and int(size.group(1))
+
+    paths = sorted({d["path"].lstrip("/") for _, _, fs, _ in cands for d in fs})
+    with ThreadPoolExecutor(16) as ex:
+        ptr = {p: (o, s) for p, o, s in ex.map(pointer, paths)}
+    out = []
+    for p, m, files, techs in cands:
+        ent = []
+        for d in files:
+            o, sz = ptr.get(d["path"].lstrip("/"), (None, None))
+            ent.append({"path": d["path"].lstrip("/"), "sourcetype": d.get("sourcetype"), "sha256": o, "size": sz})
+        if all(e["sha256"] and e["size"] and e["size"] <= SPLUNK_MAX_BYTES for e in ent):
+            out.append({"id": "SPLK-" + str(m.get("id", p)), "yml": p, "title": str(m.get("description", ""))[:200],
+                        "techniques": sorted(set(techs)), "files": ent})
+    return {"commit": SPLUNK_SHA, "max_bytes": SPLUNK_MAX_BYTES, "recordings": out}
+
+
+def get_splunk(f: Fetcher) -> None:
+    print("[splunk] Splunk attack_data", SPLUNK_SHA[:10])
+    if not SPLUNK_MANIFEST.exists():
+        SPLUNK_MANIFEST.write_text(json.dumps(build_splunk_manifest(), indent=1), encoding="utf-8")
+    man = json.loads(SPLUNK_MANIFEST.read_text(encoding="utf-8"))
+    from concurrent.futures import ThreadPoolExecutor
+
+    jobs = [(e["path"], e["sha256"]) for r in man["recordings"] for e in r["files"]]
+    for path, oid in dict(jobs).items():
+        f.sums.setdefault("splunk/" + path.split("datasets/", 1)[1], oid)
+
+    def one(job):
+        path, _ = job
+        return f.fetch(SPLUNK_LFS + path, "splunk/" + path.split("datasets/", 1)[1])
+
+    with ThreadPoolExecutor(8) as ex:
+        list(ex.map(one, sorted(set(jobs))))
+    print(f"  {len(man['recordings'])} recordings, {len(set(jobs))} files")
+
+
+SOURCES = {"attack": get_attack, "sigma": get_sigma, "art": get_art, "mordor": get_mordor,
+           "mordor-compound": get_mordor_compound, "splunk": get_splunk}
 
 
 def main(argv: list[str] | None = None) -> int:

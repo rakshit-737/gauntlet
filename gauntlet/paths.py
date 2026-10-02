@@ -4,14 +4,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+PACKAGE = Path(__file__).resolve().parent
+LEGACY_RULES = PACKAGE / "data" / "rules"  # the 7 v0.1 rules, shipped as package data
 ATTACK_VERSION = "19.2"
 SIGMA_TAG = "r2026-07-01"
 
 
 def data_dir() -> Path:
+    """``$GAUNTLET_DATA_DIR`` if set, else ``./data`` relative to the working directory."""
     env = os.environ.get("GAUNTLET_DATA_DIR")
-    return Path(env) if env else REPO / "data"
+    return Path(env) if env else Path.cwd() / "data"
 
 
 def attack_bundle(root: Path | None = None) -> Path:

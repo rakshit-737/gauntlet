@@ -7,7 +7,7 @@ import pytest
 from gauntlet import cli, cti, detect, plans, range_sim, score
 from gauntlet.models import Event, Outcome
 
-RULES = Path(__file__).resolve().parent.parent / "rules"
+RULES = Path(__file__).resolve().parent.parent / "gauntlet" / "data" / "rules"
 
 
 def test_prioritize_orders_by_relevance_times_prevalence():

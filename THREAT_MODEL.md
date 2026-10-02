@@ -9,7 +9,7 @@ v0.2: a local Python CLI that (a) downloads pinned public datasets (ATT&CK STIX,
 - In future: the isolated range and any host that runs it.
 
 ## Trust boundaries
-1. **Rule files** (`rules/*.json`, `--rules`, SigmaHQ YAML) are semi-trusted input. YAML is parsed with `yaml.safe_load` only.
+1. **Rule files** (`gauntlet/data/rules/*.json`, `--rules`, SigmaHQ YAML) are semi-trusted input. YAML is parsed with `yaml.safe_load` only.
 2. **Downloaded datasets** are third-party input: pinned refs + SHA-256 manifest (`scripts/checksums.sha256`).
 3. **Baseline JSON** (`--baseline`) is semi-trusted input.
 4. **Operator-run emulation** (outside GAUNTLET): `gauntlet manifest` output executed in an isolated range. This is the critical boundary.
