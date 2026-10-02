@@ -109,9 +109,18 @@ def load_ruleset(spec: str) -> list[SigmaRule]:
         return [r for r in (legacy_as_sigma(x) for x in load_rules(path)) if r is not None]
     if kind not in ("sigma-all", "sigma-core", "sigma-linux"):
         raise ValueError(f"unknown ruleset kind {kind!r}")
-    prefixes = LINUX_PREFIXES if kind == "sigma-linux" else WINDOWS_PREFIXES
-    rs = sigma.load_rules(path, subdir_prefix=prefixes if path.endswith(".zip") else "")
-    rules = rs.rules
+    product = "linux" if kind == "sigma-linux" else "windows"
+    prefixes = LINUX_PREFIXES if product == "linux" else WINDOWS_PREFIXES
+    p = Path(path)
+    if p.suffix == ".zip":
+        sub: str | tuple[str, ...] = prefixes
+    elif (p / "rules").is_dir():  # a SigmaHQ checkout: add the threat-hunting rules, skip deprecated/
+        sub = (*prefixes, f"rules-threat-hunting/{product}/")
+    else:
+        sub = ""
+    rs = sigma.load_rules(path, subdir_prefix=sub)
+    # emerging-threats mixes products: keep only the rule set's own platform
+    rules = [r for r in rs.rules if str(r.logsource.get("product", "")).lower() == product]
     if kind == "sigma-core":
         rules = [r for r in rules if r.status in ("stable", "test") and r.level in ("high", "critical")]
     return rules
@@ -128,13 +137,41 @@ def _work(ds: mordor.Dataset) -> dict[str, Any]:
     return replay_dataset(_WORKER["idx"], ds).to_json()
 
 
+def fingerprint(spec: str) -> str:
+    """Hash of the rule source (file bytes / directory listing) and the evaluator/parser code.
+
+    Stored in the replay cache; a mismatch forces a re-replay so ``bench`` never reuses stale hits.
+    """
+    import hashlib
+
+    h = hashlib.sha256()
+    for mod in ("sigma.py", "replay.py", "mordor.py", "formats.py", "detect.py"):
+        h.update((Path(__file__).parent / mod).read_bytes())
+    kind, _, path = spec.partition(":")
+    h.update(kind.encode())
+    p = Path(path)
+    if p.is_file():
+        h.update(p.read_bytes())
+    elif p.is_dir():
+        for q in sorted(p.rglob("*")):
+            if q.is_file() and q.suffix in (".json", ".yml", ".yaml"):
+                h.update(str(q.relative_to(p)).replace("\\", "/").encode())
+                h.update(q.read_bytes())
+    return h.hexdigest()[:16]
+
+
 def replay_many(spec: str, datasets: list[mordor.Dataset], workers: int | None = None,
                 cache: Path | None = None, progress: bool = True) -> list[ReplayResult]:
     """Replay many datasets in parallel; results cached to ``cache`` (JSON) if given."""
     done: dict[str, ReplayResult] = {}
+    fp = fingerprint(spec)
     if cache and cache.exists():
-        for d in json.loads(cache.read_text(encoding="utf-8"))["results"]:
-            done[d["dataset"]] = ReplayResult.from_json(d)
+        blob = json.loads(cache.read_text(encoding="utf-8"))
+        if blob.get("fingerprint") == fp:
+            for d in blob["results"]:
+                done[d["dataset"]] = ReplayResult.from_json(d)
+        elif progress:
+            print(f"  cache {cache.name} is stale (rules or evaluator changed) - rebuilding", flush=True)
     todo = [d for d in datasets if d.id not in done and d.available]
     if todo:
         workers = workers or max(1, min(len(todo), (os.cpu_count() or 2) - 1))
@@ -147,6 +184,6 @@ def replay_many(spec: str, datasets: list[mordor.Dataset], workers: int | None =
                           flush=True)
         if cache:
             cache.parent.mkdir(parents=True, exist_ok=True)
-            cache.write_text(json.dumps({"spec": spec, "results": [v.to_json() for v in done.values()]}),
-                             encoding="utf-8")
+            blob = {"spec": spec, "fingerprint": fp, "results": [v.to_json() for v in done.values()]}
+            cache.write_text(json.dumps(blob), encoding="utf-8")
     return [done[d.id] for d in datasets if d.id in done]

@@ -1,0 +1,77 @@
+name: live-telemetry
+# Runs an allowlisted set of BENIGN discovery commands (scripts/live_emulate.py) on this
+# ephemeral GitHub-hosted runner while auditd records them, then scores Linux Sigma rules on
+# that live telemetry with event-level labels and compares with replayed Splunk recordings.
+# No credential access, persistence, privilege escalation or network activity by the
+# emulated commands; sudo is used only to install and configure auditd and read its log.
+# See docs/adr/0005-benign-live-emulation.md.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GAUNTLET_DATA_DIR: ${{ github.workspace }}/data
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: install gauntlet and fetch pinned rules and recordings (before emulation)
+        run: |
+          pip install -e .
+          python scripts/download_data.py --only sigma,splunk
+          git clone --quiet --depth 1 --branch r2026-07-01 https://github.com/SigmaHQ/sigma "$GAUNTLET_DATA_DIR/sigma-full"
+      - name: install and configure auditd
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq auditd
+          sudo systemctl start auditd || sudo service auditd start
+          sudo auditctl -D
+          sudo auditctl -a always,exit -F arch=b64 -S execve,execveat -k gauntlet_exec
+          sudo auditctl -w /etc/os-release -p r -k gauntlet_read
+          sudo auditctl -w /usr/lib/os-release -p r -k gauntlet_read
+          sudo auditctl -w /etc/crontab -p r -k gauntlet_read
+          sudo auditctl -s | tee auditctl-status.txt
+          grep -q "enabled 1" auditctl-status.txt || { echo "::error::auditd not enabled on this runner"; exit 1; }
+      - name: run allowlisted benign discovery commands (unprivileged)
+        run: |
+          python scripts/live_emulate.py live-out/labels.json
+      - name: collect audit log
+        run: |
+          sleep 2
+          sudo auditctl -D
+          # whole log since auditd started: allowlisted commands plus runner background activity
+          sudo cat /var/log/audit/audit.log > live-out/audit.log
+          sudo chown "$(id -u)" live-out/audit.log
+          wc -l live-out/audit.log
+          test -s live-out/audit.log
+      - name: score live telemetry and compare with replayed recordings
+        run: |
+          python -m gauntlet live --audit live-out/audit.log --labels live-out/labels.json \
+            --full-rules "$GAUNTLET_DATA_DIR/sigma-full" --out live-out
+          cat live-out/LIVE.md >> "$GITHUB_STEP_SUMMARY"
+      - name: assert artefact sanity
+        run: |
+          python - <<'EOF'
+          import json
+          r = json.load(open("live-out/live.json"))
+          for name, s in r["rulesets"].items():
+              assert s["labelled_events"] > 0, name
+              assert all(c["labelled_events"] > 0 for c in s["commands"]), [c["command"] for c in s["commands"] if not c["labelled_events"]]
+              assert {"T1033", "T1082", "T1057", "T1053.003"} <= set(s["techniques"]), s["techniques"]
+          print("ok")
+          EOF
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: live-telemetry
+          path: live-out/
+          retention-days: 30

@@ -41,7 +41,8 @@ def _kb(root: Path) -> KnowledgeBase:
 
 
 def run(root: Path | None = None, out: Path | None = None, workers: int | None = None,
-        rulesets: tuple[str, ...] = RULESETS, figures: bool = True) -> dict[str, Any]:
+        rulesets: tuple[str, ...] = RULESETS, figures: bool = True,
+        use_cache: bool = True) -> dict[str, Any]:
     root = root or paths.data_dir()
     out = out or Path.cwd() / "results"
     out.mkdir(parents=True, exist_ok=True)
@@ -68,7 +69,8 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         t1 = time.time()
         rules = {r.id: r for r in replay.load_ruleset(spec)}
         res = replay.replay_many(spec, datasets, workers=workers,
-                                 cache=root / "cache" / f"replay-v2-{name}-{paths.SIGMA_TAG}.json")
+                                 cache=(root / "cache" / f"replay-v3-{name}-{paths.SIGMA_TAG}.json")
+                                 if use_cache else None)
         replays[name], rule_objs[name] = res, rules
         s = coverage.score(name, res, rules, kb)
         summaries[name] = s

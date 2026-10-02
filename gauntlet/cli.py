@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
-from . import atomics, cti, detect, paths, plans, prioritize, range_sim, score
+from . import __version__, atomics, cti, detect, paths, plans, prioritize, range_sim, score
 from .attack import load_kb
 from .models import CoverageReport, Outcome
 
@@ -196,7 +197,50 @@ def cmd_bench(a) -> int:
     if not paths.have_real_data(root):
         print(f"no datasets under {root}; run scripts/download_data.py first", file=sys.stderr)
         return 1
-    bench.run(root, a.out, workers=a.workers, rulesets=tuple(a.rulesets.split(",")), figures=not a.no_figures)
+    bench.run(root, a.out, workers=a.workers, rulesets=tuple(a.rulesets.split(",")), figures=not a.no_figures,
+              use_cache=not a.no_cache)
+    return 0
+
+
+def cmd_extended(a) -> int:
+    from . import extended
+
+    root = a.data_dir or paths.data_dir()
+    if not paths.have_real_data(root):
+        print(f"no datasets under {root}; run scripts/download_data.py first", file=sys.stderr)
+        return 1
+    extended.run(root, a.out, workers=a.workers, full_rules=a.full_rules, use_cache=not a.no_cache)
+    return 0
+
+
+def cmd_live(a) -> int:
+    from . import coverage, live, mordor, replay
+    from .attack import load_kb
+
+    root = a.data_dir or paths.data_dir()
+    specs = {"sigma-all": f"sigma-linux:{paths.sigma_zip(root)}"}
+    if a.full_rules:
+        specs["sigma-full"] = f"sigma-linux:{a.full_rules}"
+    rep: dict = {"run_id": os.environ.get("GITHUB_RUN_ID"), "rulesets": {}, "replayed": {}}
+    splunk = [d for d in mordor.load_splunk(root) if d.tactic_dir == "linux" and d.available and d.techniques]
+    kb = load_kb()
+    for name, spec in specs.items():
+        rules = replay.load_ruleset(spec)
+        r = live.score(a.audit, a.labels, rules)
+        rep["rulesets"][name] = r
+        if splunk:
+            res = replay.replay_many(spec, splunk, workers=a.workers, progress=False)
+            summ = coverage.score(name, res, {x.id: x for x in rules}, kb)
+            got = {t.technique: t.detected > 0 for t in summ.techniques}
+            rep["replayed"][name] = {t: got.get(kb.canonical(t)) for t in r["techniques"]}
+        print(f"[{name}] live technique coverage {r['technique_coverage']:.0%} "
+              f"({r['labelled_events']} labelled events, {r['audit_records']} audit records)")
+    a.out.mkdir(parents=True, exist_ok=True)
+    (a.out / "live.json").write_text(json.dumps(rep, indent=1), encoding="utf-8")
+    (a.out / "LIVE.md").write_text(live.render_md(rep), encoding="utf-8")
+    if not any(r["labelled_events"] for r in rep["rulesets"].values()):
+        print("no labelled events: auditd captured nothing for the allowlisted commands", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -214,18 +258,35 @@ def cmd_kb(a) -> int:
     return 0
 
 
+class _HelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    """Show defaults, but not for options whose default is None/False (they say so in their help)."""
+
+    def _get_help_string(self, action):
+        if action.default in (None, False) or "default" in (action.help or ""):
+            return action.help
+        return super()._get_help_string(action)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="gauntlet", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--data-dir", type=Path, default=None,
                    help="datasets dir (default $GAUNTLET_DATA_DIR or ./data)")
     sub = p.add_subparsers(dest="cmd", required=True)
+    _add = sub.add_parser
+
+    def _parser(name, **kw):
+        return _add(name, formatter_class=_HelpFormatter, **kw)
+
+    sub.add_parser = _parser  # type: ignore[method-assign]
 
     def prof(sp):
         sp.add_argument("--profile", default="ransomware",
                         help="profile name (see `profiles`) or comma list of ATT&CK groups")
-        sp.add_argument("--strategy", default="cti", choices=prioritize.STRATEGIES)
-        sp.add_argument("--top", type=int)
+        sp.add_argument("--strategy", default="cti", choices=prioritize.STRATEGIES,
+                        help="ordering: cti = relevance x prevalence; others are baselines")
+        sp.add_argument("--top", type=int, help="number of techniques (default: all)")
 
     sub.add_parser("profiles", help="list CTI threat profiles (real ATT&CK groups)")
     pp = sub.add_parser("plan", help="CTI-prioritized emulation plan")
@@ -234,39 +295,54 @@ def main(argv: list[str] | None = None) -> int:
                     help="art = only techniques with an Atomic Red Team Windows test")
     pm = sub.add_parser("manifest", help="dry-run Atomic Red Team manifest in priority order")
     prof(pm)
-    pm.add_argument("--out", type=Path)
+    pm.add_argument("--out", type=Path, help="write the manifest JSON here (default: stdout)")
     pd = sub.add_parser("predict", help="likely next techniques given observed ones")
     pd.add_argument("--observed", required=True, help="comma list, e.g. T1566.001,T1059.001")
-    pd.add_argument("-k", type=int, default=10)
+    pd.add_argument("-k", type=int, default=10, help="number of predictions")
     pr = sub.add_parser("replay", help="replay real recorded attacks through detections and score coverage")
     prof(pr)
     pr.add_argument("--ruleset", default="sigma-core", help="sigma-core | sigma-all | legacy | <kind>:<path>")
     pr.add_argument("--rules", type=Path, default=DEFAULT_RULES, help="rules dir for --ruleset legacy")
-    pr.add_argument("--workers", type=int)
-    pr.add_argument("--json", type=Path)
+    pr.add_argument("--workers", type=int, help="replay processes (default: CPUs - 1)")
+    pr.add_argument("--json", type=Path, help="write the coverage report JSON here")
     pr.add_argument("--navigator", type=Path, help="write an ATT&CK Navigator layer here")
     pr.add_argument("--baseline", type=Path, help="exit 2 if coverage regressed vs this JSON")
     pb = sub.add_parser("bench", help="full real-data benchmark -> results/")
-    pb.add_argument("--out", type=Path, default=Path("results"))
-    pb.add_argument("--workers", type=int)
-    pb.add_argument("--rulesets", default="legacy,sigma-core,sigma-all")
-    pb.add_argument("--no-figures", action="store_true")
+    pb.add_argument("--out", type=Path, default=Path("results"), help="output directory")
+    pb.add_argument("--workers", type=int, help="replay processes (default: CPUs - 1)")
+    pb.add_argument("--rulesets", default="legacy,sigma-core,sigma-all", help="comma list of rule sets")
+    pb.add_argument("--no-figures", action="store_true", help="skip matplotlib figures")
+    pb.add_argument("--no-cache", action="store_true", help="ignore and rebuild the replay cache")
+    pe = sub.add_parser("extended", help="cross-dataset benchmark (OTRF atomic + compound, Splunk) "
+                        "and claimed-vs-measured coverage -> results/extended.json")
+    pe.add_argument("--out", type=Path, default=Path("results"), help="output directory")
+    pe.add_argument("--workers", type=int, help="replay processes (default: CPUs - 1)")
+    pe.add_argument("--full-rules", type=Path, help="SigmaHQ checkout (adds low-level and threat-hunting rules)")
+    pe.add_argument("--no-cache", action="store_true", help="ignore and rebuild the replay cache")
+    pl = sub.add_parser("live", help="score live auditd telemetry with event-level labels (CI job)")
+    pl.add_argument("--audit", type=Path, required=True, help="raw audit log (ausearch --raw)")
+    pl.add_argument("--labels", type=Path, required=True, help="labels.json from scripts/live_emulate.py")
+    pl.add_argument("--full-rules", type=Path, help="SigmaHQ checkout (adds low-level and threat-hunting rules)")
+    pl.add_argument("--workers", type=int, help="replay processes for the Splunk comparison")
+    pl.add_argument("--out", type=Path, default=Path("live-out"), help="output directory")
     pk = sub.add_parser("kb", help="rebuild the shipped ATT&CK / ART derivatives from the downloads")
-    pk.add_argument("--stix", type=Path)
-    pk.add_argument("--art-csv", type=Path)
-    for name in ("run", "sim"):
-        ps = sub.add_parser(name, help="offline SIMULATED loop (synthetic telemetry)")
-        ps.add_argument("--profile", default="ransomware")
-        ps.add_argument("--rules", type=Path, default=DEFAULT_RULES)
-        ps.add_argument("--top", type=int)
-        ps.add_argument("--seed", type=int, default=7)
+    pk.add_argument("--stix", type=Path, help="ATT&CK STIX bundle (default: downloaded v19.2)")
+    pk.add_argument("--art-csv", type=Path, help="Atomic Red Team windows-index.csv")
+    for name in ("sim", "run"):
+        ps = sub.add_parser(name, help="offline SIMULATED loop (synthetic telemetry)" if name == "sim"
+                            else "alias of sim")
+        ps.add_argument("--profile", default="ransomware", help="threat profile")
+        ps.add_argument("--rules", type=Path, default=DEFAULT_RULES, help="legacy JSON rules directory")
+        ps.add_argument("--top", type=int, help="number of techniques (default: all)")
+        ps.add_argument("--seed", type=int, default=7, help="simulation seed")
         ps.add_argument("--disable-source", action="append", default=[],
                         help="simulate a telemetry gap by removing a log source from all hosts")
         ps.add_argument("--json", type=Path, help="write report JSON here")
         ps.add_argument("--baseline", type=Path, help="fail (exit 2) if coverage regressed vs this JSON")
     a = p.parse_args(argv)
     handlers = {"profiles": cmd_profiles, "plan": cmd_plan, "manifest": cmd_manifest, "predict": cmd_predict,
-                "replay": cmd_replay, "bench": cmd_bench, "kb": cmd_kb, "run": cmd_sim, "sim": cmd_sim}
+                "replay": cmd_replay, "bench": cmd_bench, "extended": cmd_extended,
+                "live": cmd_live, "kb": cmd_kb, "run": cmd_sim, "sim": cmd_sim}
     try:
         return handlers[a.cmd](a)
     except KeyError as e:

@@ -1,0 +1,3 @@
+include tests/*.py
+include scripts/*.py scripts/*.json scripts/checksums.sha256
+include requirements*.txt

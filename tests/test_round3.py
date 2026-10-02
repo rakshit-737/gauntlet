@@ -1,0 +1,112 @@
+import importlib.util
+import json
+from pathlib import Path
+
+import pytest
+
+from gauntlet import extended, live, mordor, stats
+from gauntlet.replay import ReplayResult
+from gauntlet.sigma import parse_rule
+
+REPO = Path(__file__).resolve().parent.parent
+
+
+def _load_script(name):
+    spec = importlib.util.spec_from_file_location(name, REPO / "scripts" / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def lrule(rid, tag, sel):
+    return parse_rule({"title": rid, "id": rid, "tags": [f"attack.{tag.lower()}"],
+                       "logsource": {"product": "linux", "category": "process_creation"},
+                       "detection": {"sel": sel, "condition": "sel"}})
+
+
+AUDIT = """type=SYSCALL msg=audit(1.000:10): syscall=59 ppid=1 pid=500 exe="/usr/bin/whoami" key="g"
+type=EXECVE msg=audit(1.000:10): argc=1 a0="whoami"
+type=SYSCALL msg=audit(2.000:11): syscall=59 ppid=1 pid=501 exe="/usr/bin/uname" key="g"
+type=EXECVE msg=audit(2.000:11): argc=2 a0="uname" a1="-a"
+type=SYSCALL msg=audit(3.000:12): syscall=59 ppid=1 pid=900 exe="/usr/bin/apt" key="g"
+type=EXECVE msg=audit(3.000:12): argc=1 a0="apt"
+"""
+
+
+def test_live_score_event_level(tmp_path):
+    (tmp_path / "a.log").write_text(AUDIT)
+    (tmp_path / "l.json").write_text(json.dumps({"commands": [
+        {"argv": ["whoami"], "technique": "T1033", "pid": 500},
+        {"argv": ["uname", "-a"], "technique": "T1082", "pid": 501}]}))
+    rules = [lrule("who", "T1033", {"Image|endswith": "/whoami"}),
+             lrule("apt", "T1059", {"Image|endswith": "/apt"})]
+    r = live.score(tmp_path / "a.log", tmp_path / "l.json", rules)
+    assert r["labelled_events"] == 6 and r["background_events"] == 3
+    assert r["techniques"] == {"T1033": {"claimed": True, "measured": True},
+                               "T1082": {"claimed": False, "measured": False}}
+    assert r["background_rules_fired"] == ["apt"]
+    md = live.render_md({"rulesets": {"x": r}, "replayed": {"x": {"T1033": False}}})
+    assert "`whoami` | T1033" in md
+
+
+def test_claimed_vs_measured_and_gaps():
+    rules = {r.id: r for r in [lrule("a", "T1033", {"Image|endswith": "/whoami"}),
+                               lrule("b", "T1082", {"Image|endswith": "/uname"})]}
+    res = [ReplayResult("d1", ("T1033",), 5, {"auditd-exec": 5}, {"a": {"auditd-exec": 1}}),
+           ReplayResult("d2", ("T1082",), 5, {"auditd-exec": 5}, {}),
+           ReplayResult("d3", ("T1082.001",), 5, {"auditd": 5}, {})]
+    out = extended.claimed_vs_measured(res, rules)
+    assert out["claimed"] == 3 and out["measured"] == 1
+    gaps = {r["technique"]: r["gap"] for r in out["rows"]}
+    assert gaps == {"T1033": None, "T1082": "rule_logic_gap", "T1082.001": "telemetry_gap"}
+
+
+def test_exact_tests():
+    assert stats.mcnemar_exact(10, 0) == pytest.approx(2 * 0.5 ** 10)
+    assert stats.binom_two_sided(0, 4) == 0.125
+    assert stats.mcnemar_exact(0, 0) == 1.0
+
+
+def test_splunk_and_compound_loaders(tmp_path):
+    man = {"recordings": [{"id": "SPLK-1", "title": "t", "techniques": ["T1033"],
+                           "files": [{"path": "datasets/attack_techniques/T1033/x/a.log", "sourcetype": "auditd"}]},
+                          {"id": "SPLK-2", "title": "w", "techniques": ["T1003.001"],
+                           "files": [{"path": "datasets/attack_techniques/T1003.001/y/b.log",
+                                      "sourcetype": "XmlWinEventLog"}]}]}
+    mp = tmp_path / "m.json"
+    mp.write_text(json.dumps(man))
+    ds = mordor.load_splunk(tmp_path, mp)
+    assert [(d.id, d.tactic_dir, d.source) for d in ds] == [("SPLK-1", "linux", "splunk"),
+                                                           ("SPLK-2", "windows", "splunk")]
+    md = tmp_path / "mordor-compound" / "_metadata"
+    md.mkdir(parents=True)
+    (md / "LSASS_campaign_01.yaml").write_text(
+        "id: CMP-1\ntitle: c\nattack_mappings:\n- technique: T1003\n  sub-technique: '001'\n"
+        "files:\n- type: Host\n  link: https://x/master/datasets/compound/LSASS_campaign_01/a.zip\n")
+    c = mordor.load_compound(tmp_path)
+    assert c[0].techniques == ("T1003.001",) and c[0].files[0].name == "a.zip"
+
+
+def test_committed_splunk_manifest_paths_are_safe():
+    man = json.loads((REPO / "scripts" / "splunk_attack_data.json").read_text(encoding="utf-8"))
+    assert man["recordings"]
+    for r in man["recordings"]:
+        for f in r["files"]:
+            assert f["path"].startswith("datasets/attack_techniques/") and ".." not in f["path"].split("/")
+            assert len(f["sha256"]) == 64 and f["size"] <= man["max_bytes"]
+
+
+def test_live_allowlist_is_benign():
+    em = _load_script("live_emulate")
+    em.check_allowlist()
+    bins = {argv[0] for argv, _ in em.ALLOWLIST}
+    assert bins <= {"whoami", "id", "uname", "hostname", "cat", "ps", "crontab", "ls"}
+    assert ("crontab", "-l") in {a for a, _ in em.ALLOWLIST}
+    assert em.main("x.json") == 3 or __import__("os").environ.get("GITHUB_ACTIONS") == "true"
+
+
+def test_fetcher_refuses_path_escape(tmp_path):
+    dl = _load_script("download_data")
+    f = dl.Fetcher(tmp_path, {})
+    with pytest.raises(ValueError):
+        f.fetch("https://example.invalid/x", "../evil.txt")

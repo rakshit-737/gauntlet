@@ -49,3 +49,17 @@ def paired_bootstrap_ci(a: Sequence[float], b: Sequence[float], n_boot: int = 20
     diff = [x - y for x, y in zip(a, b, strict=True)]
     lo, hi = bootstrap_ci(diff, n_boot, alpha, seed)
     return {"mean_diff": round(statistics.fmean(diff), 4) if diff else 0.0, "ci95": [lo, hi], "n": len(diff)}
+
+
+def binom_two_sided(k: int, n: int) -> float:
+    """Exact two-sided binomial (p=0.5) test p-value: sign test / exact McNemar on ``n`` discordant pairs."""
+    if n <= 0:
+        return 1.0
+    k = min(k, n - k)
+    tail = sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n
+    return min(1.0, 2 * tail)
+
+
+def mcnemar_exact(b: int, c: int) -> float:
+    """Exact McNemar p-value for paired binary outcomes with ``b`` and ``c`` discordant pairs."""
+    return binom_two_sided(min(b, c), b + c)

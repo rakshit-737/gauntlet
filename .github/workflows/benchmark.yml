@@ -1,0 +1,44 @@
+name: benchmark
+# Cold, from-scratch benchmark on a clean Linux runner (no local AV quarantine):
+# downloads every pinned source, verifies checksums, runs `bench` and `extended`, and uploads
+# results/ as an artefact. Only the small result files are committed to the repo.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GAUNTLET_DATA_DIR: ${{ github.workspace }}/data
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[figures]"
+      - name: download pinned datasets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/download_data.py --only attack,sigma,art,mordor,mordor-compound,splunk 2>&1 | tail -20
+          git clone --quiet --depth 1 --branch r2026-07-01 https://github.com/SigmaHQ/sigma "$GAUNTLET_DATA_DIR/sigma-full"
+      - name: checksums for files without a committed digest
+        run: |
+          cp scripts/checksums.sha256 /tmp/before.sha256
+          python scripts/download_data.py --only attack,sigma,art,mordor,mordor-compound --write-checksums | tail -2
+          mkdir -p results && cp scripts/checksums.sha256 results/checksums-ci.sha256
+          diff /tmp/before.sha256 scripts/checksums.sha256 || true
+      - name: bench (cold, no cache)
+        run: python -m gauntlet bench --no-cache --out results 2>&1 | tail -40
+      - name: extended (cross-dataset, claimed vs measured)
+        run: python -m gauntlet extended --no-cache --full-rules "$GAUNTLET_DATA_DIR/sigma-full" --out results 2>&1 | tail -20
+      - run: cat results/EXTENDED.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: results
+          path: results/
+          retention-days: 90
