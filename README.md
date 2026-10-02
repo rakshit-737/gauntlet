@@ -7,7 +7,7 @@
 ![ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v19.2-red)
 ![Sigma](https://img.shields.io/badge/SigmaHQ-r2026--07--01-orange)
 
-**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns**.
+**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed at family level vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns**.
 
 It also ranks techniques by what real ATT&CK groups do, turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data.
 
@@ -22,8 +22,6 @@ python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\act
 pip install "git+https://github.com/rakshit-737/gauntlet@main"
 gauntlet plan --profile ransomware --top 10          # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5 # likely next techniques
-# no Python? the container works the same way:
-docker run --rm ghcr.io/rakshit-737/gauntlet:latest plan --profile ransomware --top 10
 ```
 
 The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`; this distribution is named `gauntlet-coverage` (import package and command stay `gauntlet`).
@@ -52,7 +50,7 @@ Almost every claimed-but-missed technique is a *rule-logic gap*: the telemetry i
 
 **2. Live telemetry vs replay.** A CI runner executes 9 benign discovery commands under auditd, and each audit record is labelled with the command that produced it. ([`LIVE.md`](results/LIVE.md))
 
-- The SigmaHQ release package detects **0 of 4** of these techniques. The full tag (with low and informational rules) detects **3 of 4** (T1033, T1082, T1057).
+- The SigmaHQ release package detects **0 of 4** of these techniques. The full tag (with low and informational rules) detects **3 of 4** (T1033, T1082, T1057). Single runner execution, n = 4 techniques: per-command outcomes, not a rate.
 - Splunk's replayed auditd recordings of the same techniques are detected **0 times**: they contain no `EXECVE` records.
 - `whoami` is detected, but `/usr/bin/whoami` is not, because the rule matches `a0 == "whoami"` literally.
 - `crontab -l` is tagged T1007 upstream, so it does not count as cron discovery (T1053.003).
