@@ -1,7 +1,7 @@
 # GAUNTLET
 
 [![ci](https://github.com/rakshit-737/gauntlet/actions/workflows/ci.yml/badge.svg)](https://github.com/rakshit-737/gauntlet/actions/workflows/ci.yml)
-![python](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)
+![python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
 [![docs](https://github.com/rakshit-737/gauntlet/actions/workflows/docs.yml/badge.svg)](https://rakshit-737.github.io/gauntlet/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v19.2-red)
@@ -26,7 +26,7 @@ gauntlet predict --observed T1566.001,T1059.001 -k 5 # likely next techniques
 docker run --rm ghcr.io/rakshit-737/gauntlet:latest plan --profile ransomware --top 10
 ```
 
-The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`.
+The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`; this distribution is named `gauntlet-coverage` (import package and command stay `gauntlet`).
 
 > Lab-only. The `gauntlet` package **never executes attack techniques**: it reads recorded logs and prints
 > Atomic Red Team test names marked DRY RUN. One CI job runs an allowlist of benign, read-only discovery
@@ -181,7 +181,7 @@ Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No
 
 - Every source is pinned (git commit or release tag) and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256), or against git-LFS sha256 oids for Splunk.
 - The committed `results/` come from the cold `benchmark` workflow on a clean Linux runner. On that 4-core runner, `bench` takes about 3 minutes cold and `extended` about 4. Random baselines use fixed seeds, and the replay cache is keyed by a fingerprint of the rules and evaluator code.
-- CI runs ruff, the offline tests on Python 3.10-3.14, wheel/sdist/container smoke tests, pip-audit and gitleaks. The `@pytest.mark.realdata` tests run locally once the data is present.
+- CI runs ruff, the offline tests on Python 3.11-3.14, wheel/sdist/container smoke tests, pip-audit and gitleaks. The `@pytest.mark.realdata` tests run locally once the data is present.
 
 ## Prior art and how this differs
 

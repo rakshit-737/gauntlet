@@ -63,4 +63,4 @@ semantics (case sensitivity, wildcard handling, list/all behaviour).
 ## Commits and PRs
 
 Conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `data:`, `perf:`,
-`refactor:`, `ci:`), small and logical. CI (pytest on 3.10-3.14, ruff, wheel/sdist/container smoke tests, pip-audit, gitleaks) must be green.
+`refactor:`, `ci:`), small and logical. CI (pytest on 3.11-3.14, ruff, wheel/sdist/container smoke tests, pip-audit, gitleaks) must be green.

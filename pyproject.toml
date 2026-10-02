@@ -3,10 +3,10 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gauntlet"
+name = "gauntlet-coverage"
 version = "1.0.0"
 description = "Threat-informed purple-team coverage scoring: ATT&CK CTI prioritization, replay of real attack telemetry, Sigma detection scoring"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = ["pyyaml>=6"]
 readme = "README.md"
 license = "MIT"
@@ -34,11 +34,11 @@ markers = ["realdata: needs the downloaded datasets (GAUNTLET_DATA_DIR); skipped
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E731", "B023", "UP038"]
+ignore = ["E731", "B023", "UP038", "UP042"]
 
 [tool.ruff.lint.per-file-ignores]
 "gauntlet/plans.py" = ["E501"]

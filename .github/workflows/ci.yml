@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -62,7 +62,7 @@ jobs:
       - name: sdist tests run
         run: |
           mkdir /tmp/s && tar -xzf dist/*.tar.gz -C /tmp/s
-          cd /tmp/s/gauntlet-* && /tmp/v/bin/pip install pytest && /tmp/v/bin/python -m pytest -q
+          cd /tmp/s/gauntlet_coverage-* && /tmp/v/bin/pip install pytest && /tmp/v/bin/python -m pytest -q
       - name: container build and smoke test
         run: |
           docker build -t gauntlet:ci .
