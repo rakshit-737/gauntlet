@@ -1,5 +1,5 @@
 # Runtime
-pyyaml>=6
+pyyaml>=6.0.3
 # Optional: figures in `gauntlet bench` (skipped gracefully if absent)
 matplotlib>=3.8
 # Dev/test
