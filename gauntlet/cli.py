@@ -69,6 +69,7 @@ def cmd_sim(a) -> int:
     _print_report(report, ranked)
     data = report.to_dict()
     if a.json:
+        a.json.parent.mkdir(parents=True, exist_ok=True)
         a.json.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return _check_baseline(a.baseline, data)
 
@@ -125,6 +126,7 @@ def cmd_manifest(a) -> int:
            "steps": steps}
     text = json.dumps(doc, indent=2)
     if a.out:
+        a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_text(text, encoding="utf-8")
         print(f"wrote {len(steps)} steps -> {a.out}")
     else:
@@ -182,9 +184,11 @@ def cmd_replay(a) -> int:
     data = summ.to_dict()
     data["profile"] = a.profile
     if a.json:
+        a.json.parent.mkdir(parents=True, exist_ok=True)
         a.json.write_text(json.dumps(data, indent=2), encoding="utf-8")
     if a.navigator:
         layer = coverage.navigator_layer(summ, kb.version, weights=rel)
+        a.navigator.parent.mkdir(parents=True, exist_ok=True)
         a.navigator.write_text(json.dumps(layer, indent=2), encoding="utf-8")
         print(f"ATT&CK Navigator layer -> {a.navigator}")
     return _check_baseline(a.baseline, data)

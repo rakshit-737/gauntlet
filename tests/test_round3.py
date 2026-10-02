@@ -143,3 +143,10 @@ def test_held_out_selection_runs():
     assert out["candidate_rules"] == 2
     assert out["greedy_unweighted"]["test_technique_coverage"] in (0.0, 0.5)
     assert 0.0 <= out["random"]["test_technique_coverage_mean"] <= 0.5
+
+
+def test_manifest_out_creates_missing_dir(tmp_path):
+    from gauntlet.cli import main
+    out = tmp_path / "missing" / "plan.json"
+    main(["manifest", "--profile", "ransomware", "--top", "3", "--out", str(out)])
+    assert out.exists()
