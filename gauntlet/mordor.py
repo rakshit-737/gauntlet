@@ -25,7 +25,8 @@ class Dataset:
     title: str
     techniques: tuple[str, ...]  # ATT&CK ids, e.g. ("T1003.001",)
     files: tuple[Path, ...]      # local host recordings (zip)
-    tactic_dir: str = ""         # e.g. credential_access
+    tactic_dir: str = ""         # e.g. credential_access (OTRF atomic), "compound", or platform (Splunk)
+    source: str = "otrf"         # otrf | otrf-compound | splunk | live
 
     @property
     def available(self) -> bool:
@@ -110,8 +111,45 @@ def iter_events(path: str | Path) -> Iterator[dict[str, Any]]:
             yield from _iter_lines(fh)
 
 
-def _iter_lines(fh) -> Iterator[dict[str, Any]]:
+def _iter_lines(fh) -> Iterator[dict[str, Any]]:  # noqa: D401
     """JSON lines (OTRF), XML event lines (Splunk / Sysmon for Linux) or raw auditd lines."""
     from .formats import iter_text_lines
 
     yield from iter_text_lines(raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw for raw in fh)
+
+
+def load_compound(root: str | Path) -> list[Dataset]:
+    """OTRF *compound* campaigns (``<root>/mordor-compound/_metadata/*.yaml``): multi-technique recordings."""
+    root = Path(root)
+    out = []
+    for p in sorted((root / "mordor-compound" / "_metadata").glob("*.yaml")):
+        meta = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        files = [root / "mordor-compound" / f["link"].split("/datasets/compound/", 1)[-1]
+                 for f in meta.get("files") or [] if str(f.get("type", "")).lower() == "host"]
+        out.append(Dataset(str(meta.get("id", p.stem)), str(meta.get("title", "")),
+                           _techniques(meta), tuple(files), "compound", source="otrf-compound"))
+    return out
+
+
+def load_splunk(root: str | Path, manifest: str | Path | None = None) -> list[Dataset]:
+    """Splunk attack_data recordings listed in the committed manifest (recording-level labels)."""
+    import json
+
+    root = Path(root)
+    mp = Path(manifest) if manifest else paths_manifest()
+    if not mp.exists():
+        return []
+    man = json.loads(mp.read_text(encoding="utf-8"))
+    out = []
+    for r in man["recordings"]:
+        techs = tuple(sorted({t for t in r["techniques"] if t[1:].replace(".", "").isdigit()}))
+        files = tuple(root / "splunk" / f["path"].split("datasets/", 1)[1] for f in r["files"])
+        st = {f["sourcetype"] for f in r["files"]}
+        platform = "linux" if st & {"auditd", "sysmon:linux"} else "windows"
+        out.append(Dataset(r["id"], r["title"], techs, files, platform, source="splunk"))
+    return out
+
+
+def paths_manifest() -> Path:
+    """Location of the Splunk manifest: next to the package in a checkout (scripts/)."""
+    return Path(__file__).resolve().parent.parent / "scripts" / "splunk_attack_data.json"
