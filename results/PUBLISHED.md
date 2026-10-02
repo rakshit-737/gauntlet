@@ -1,0 +1,41 @@
+# Comparison with published coverage numbers
+
+## CTID Top ATT&CK Techniques: `has_sigma` (claimed) vs measured on OTRF (sigma-all)
+
+Of the 53 OTRF-recorded techniques listed by CTID, CTID flags 50 (94%) as having a Sigma rule; GAUNTLET measures an on-target detection for 42 (79%) (exact McNemar p = 0.0574). Claimed but not measured: T1012, T1049, T1056.002, T1059.001, T1069.002, T1087.001, T1087.002, T1110.003, T1135, T1210, T1222.001. Measured but not flagged by CTID: T1055.002, T1218.004, T1558.003.
+
+Not like-for-like: CTID's flag dates from its own Sigma snapshot and says a rule *exists*; GAUNTLET pins SigmaHQ r2026-07-01 and requires the rule to fire on recorded telemetry.
+
+## RedGap (benign Linux lab, SigmaHQ linux/process_creation) vs GAUNTLET live auditd and Splunk replay
+
+RedGap publishes 33/51 techniques detected. Techniques both projects exercise:
+
+| Technique | RedGap detected (gap type) | GAUNTLET live | GAUNTLET Splunk replay (sigma-full) |
+|---|:---:|:---:|:---:|
+| T1003.008 OS Credential Dumping: /etc/passwd and /etc/shadow | no (rule) | n/a | no |
+| T1016 System Network Configuration Discovery | yes (none) | n/a | no |
+| T1027 Obfuscated Files or Information | yes (none) | n/a | no |
+| T1033 System Owner/User Discovery | no (rule) | sigma-all: no; sigma-full: yes | no |
+| T1036 Masquerading | yes (none) | n/a | no |
+| T1053.002 Scheduled Task/Job: At | yes (none) | n/a | no |
+| T1053.003 Scheduled Task/Job: Cron | yes (none) | sigma-all: no; sigma-full: no | no |
+| T1057 Process Discovery | no (base_rate) | sigma-all: no; sigma-full: yes | n/a |
+| T1059 Command and Scripting Interpreter | yes (none) | n/a | no |
+| T1059.004 Command and Scripting Interpreter: Unix Shell | yes (none) | n/a | yes |
+| T1082 System Information Discovery | yes (none) | sigma-all: no; sigma-full: yes | no |
+| T1083 File and Directory Discovery | yes (none) | n/a | no |
+| T1098.004 Account Manipulation: SSH Authorized Keys | no (rule) | n/a | no |
+| T1105 Ingress Tool Transfer | yes (none) | n/a | no |
+| T1136.001 Create Account: Local Account | no (rule) | n/a | yes |
+| T1140 Deobfuscate/Decode Files or Information | yes (none) | n/a | no |
+| T1222.002 Linux and Mac File and Directory Permissions Modification | yes (none) | n/a | no |
+| T1485 Data Destruction | yes (none) | n/a | no |
+| T1489 Service Stop | yes (none) | n/a | no |
+| T1543.002 Create or Modify System Process: Systemd Service | no (rule) | n/a | no |
+| T1546.004 Event Triggered Execution: Unix Shell Configuration Modification | no (base_rate) | n/a | no |
+| T1548 Abuse Elevation Control Mechanism | yes (none) | n/a | no |
+| T1548.001 Abuse Elevation Control Mechanism: Setuid and Setgid | yes (none) | n/a | no |
+| T1552.004 Unsecured Credentials: Private Keys | no (rule) | n/a | yes |
+| T1567 Exfiltration Over Web Service | yes (none) | n/a | no |
+
+Not like-for-like: RedGap uses its own fixture telemetry mapped to Sysmon-for-Linux process events and a different SigmaHQ commit; GAUNTLET's live job uses raw auditd. No published technique-coverage figure exists for SigmaHQ on OTRF or Splunk attack_data recordings, and MITRE ATT&CK Evaluations score vendor products, not open rule sets, so they are not compared.

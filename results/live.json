@@ -1,0 +1,275 @@
+{
+ "run_id": "36995051317",
+ "rulesets": {
+  "sigma-all": {
+   "audit_records": 256,
+   "events": 281,
+   "labelled_events": 67,
+   "background_events": 214,
+   "rules": 128,
+   "background_rules_fired": [
+    "Audit Rules Deleted Via Auditctl"
+   ],
+   "commands": [
+    {
+     "command": "whoami",
+     "technique": "T1033",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "/usr/bin/whoami",
+     "technique": "T1033",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "id",
+     "technique": "T1033",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "uname -a",
+     "technique": "T1082",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "hostname",
+     "technique": "T1082",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "cat /etc/os-release",
+     "technique": "T1082",
+     "labelled_events": 11,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "ps -ef",
+     "technique": "T1057",
+     "labelled_events": 7,
+     "claimed": false,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "crontab -l",
+     "technique": "T1053.003",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "ls -la /etc/cron.d",
+     "technique": "T1053.003",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    }
+   ],
+   "techniques": {
+    "T1033": {
+     "claimed": true,
+     "measured": false
+    },
+    "T1082": {
+     "claimed": true,
+     "measured": false
+    },
+    "T1057": {
+     "claimed": false,
+     "measured": false
+    },
+    "T1053.003": {
+     "claimed": true,
+     "measured": false
+    }
+   },
+   "technique_coverage": 0.0,
+   "technique_coverage_ci95": [
+    0.0,
+    0.4899
+   ],
+   "claimed_coverage": 0.75
+  },
+  "sigma-full": {
+   "audit_records": 256,
+   "events": 281,
+   "labelled_events": 67,
+   "background_events": 214,
+   "rules": 192,
+   "background_rules_fired": [
+    "Audit Rules Deleted Via Auditctl"
+   ],
+   "commands": [
+    {
+     "command": "whoami",
+     "technique": "T1033",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": true,
+     "on_target_rules": [
+      "System Owner or User Discovery - Linux"
+     ],
+     "other_rules_fired": []
+    },
+    {
+     "command": "/usr/bin/whoami",
+     "technique": "T1033",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    },
+    {
+     "command": "id",
+     "technique": "T1033",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": true,
+     "on_target_rules": [
+      "System Owner or User Discovery - Linux"
+     ],
+     "other_rules_fired": [
+      "Local System Accounts Discovery - Linux"
+     ]
+    },
+    {
+     "command": "uname -a",
+     "technique": "T1082",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": true,
+     "on_target_rules": [
+      "System Information Discovery",
+      "System Information Discovery - Auditd"
+     ],
+     "other_rules_fired": [
+      "System Owner or User Discovery - Linux"
+     ]
+    },
+    {
+     "command": "hostname",
+     "technique": "T1082",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": true,
+     "on_target_rules": [
+      "System Information Discovery",
+      "System Information Discovery - Auditd"
+     ],
+     "other_rules_fired": [
+      "System Owner or User Discovery - Linux"
+     ]
+    },
+    {
+     "command": "cat /etc/os-release",
+     "technique": "T1082",
+     "labelled_events": 11,
+     "claimed": true,
+     "measured": true,
+     "on_target_rules": [
+      "System and Hardware Information Discovery"
+     ],
+     "other_rules_fired": []
+    },
+    {
+     "command": "ps -ef",
+     "technique": "T1057",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": true,
+     "on_target_rules": [
+      "Process Discovery"
+     ],
+     "other_rules_fired": []
+    },
+    {
+     "command": "crontab -l",
+     "technique": "T1053.003",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": [
+      "Crontab Enumeration"
+     ]
+    },
+    {
+     "command": "ls -la /etc/cron.d",
+     "technique": "T1053.003",
+     "labelled_events": 7,
+     "claimed": true,
+     "measured": false,
+     "on_target_rules": [],
+     "other_rules_fired": []
+    }
+   ],
+   "techniques": {
+    "T1033": {
+     "claimed": true,
+     "measured": true
+    },
+    "T1082": {
+     "claimed": true,
+     "measured": true
+    },
+    "T1057": {
+     "claimed": true,
+     "measured": true
+    },
+    "T1053.003": {
+     "claimed": true,
+     "measured": false
+    }
+   },
+   "technique_coverage": 0.75,
+   "technique_coverage_ci95": [
+    0.3006,
+    0.9544
+   ],
+   "claimed_coverage": 1.0
+  }
+ },
+ "replayed": {
+  "sigma-all": {
+   "T1033": false,
+   "T1082": false,
+   "T1057": null,
+   "T1053.003": false
+  },
+  "sigma-full": {
+   "T1033": false,
+   "T1082": false,
+   "T1057": null,
+   "T1053.003": false
+  }
+ }
+}

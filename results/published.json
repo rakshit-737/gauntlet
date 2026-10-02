@@ -1,0 +1,259 @@
+{
+ "ctid": {
+  "techniques_compared": 53,
+  "ctid_claimed": 50,
+  "measured": 42,
+  "claimed_ci95": [
+   0.8463,
+   0.9806
+  ],
+  "measured_ci95": [
+   0.6654,
+   0.88
+  ],
+  "claimed_not_measured": [
+   "T1012",
+   "T1049",
+   "T1056.002",
+   "T1059.001",
+   "T1069.002",
+   "T1087.001",
+   "T1087.002",
+   "T1110.003",
+   "T1135",
+   "T1210",
+   "T1222.001"
+  ],
+  "measured_not_claimed": [
+   "T1055.002",
+   "T1218.004",
+   "T1558.003"
+  ],
+  "mcnemar_p": 0.057373046875
+ },
+ "redgap": {
+  "redgap_summary": {
+   "techniques": 51,
+   "detected": 33,
+   "gaps": 18,
+   "gaps_by_type": {
+    "base_rate": 2,
+    "rule": 16
+   }
+  },
+  "rows": [
+   {
+    "technique": "T1003.008",
+    "name": "OS Credential Dumping: /etc/passwd and /etc/shadow",
+    "redgap_detected": false,
+    "redgap_gap_type": "rule",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1016",
+    "name": "System Network Configuration Discovery",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1027",
+    "name": "Obfuscated Files or Information",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1033",
+    "name": "System Owner/User Discovery",
+    "redgap_detected": false,
+    "redgap_gap_type": "rule",
+    "gauntlet_live": {
+     "sigma-all": false,
+     "sigma-full": true
+    },
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1036",
+    "name": "Masquerading",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1053.002",
+    "name": "Scheduled Task/Job: At",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1053.003",
+    "name": "Scheduled Task/Job: Cron",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": {
+     "sigma-all": false,
+     "sigma-full": false
+    },
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1057",
+    "name": "Process Discovery",
+    "redgap_detected": false,
+    "redgap_gap_type": "base_rate",
+    "gauntlet_live": {
+     "sigma-all": false,
+     "sigma-full": true
+    },
+    "gauntlet_splunk_replay": null
+   },
+   {
+    "technique": "T1059",
+    "name": "Command and Scripting Interpreter",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1059.004",
+    "name": "Command and Scripting Interpreter: Unix Shell",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": true
+   },
+   {
+    "technique": "T1082",
+    "name": "System Information Discovery",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": {
+     "sigma-all": false,
+     "sigma-full": true
+    },
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1083",
+    "name": "File and Directory Discovery",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1098.004",
+    "name": "Account Manipulation: SSH Authorized Keys",
+    "redgap_detected": false,
+    "redgap_gap_type": "rule",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1105",
+    "name": "Ingress Tool Transfer",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1136.001",
+    "name": "Create Account: Local Account",
+    "redgap_detected": false,
+    "redgap_gap_type": "rule",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": true
+   },
+   {
+    "technique": "T1140",
+    "name": "Deobfuscate/Decode Files or Information",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1222.002",
+    "name": "Linux and Mac File and Directory Permissions Modification",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1485",
+    "name": "Data Destruction",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1489",
+    "name": "Service Stop",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1543.002",
+    "name": "Create or Modify System Process: Systemd Service",
+    "redgap_detected": false,
+    "redgap_gap_type": "rule",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1546.004",
+    "name": "Event Triggered Execution: Unix Shell Configuration Modification",
+    "redgap_detected": false,
+    "redgap_gap_type": "base_rate",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1548",
+    "name": "Abuse Elevation Control Mechanism",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1548.001",
+    "name": "Abuse Elevation Control Mechanism: Setuid and Setgid",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   },
+   {
+    "technique": "T1552.004",
+    "name": "Unsecured Credentials: Private Keys",
+    "redgap_detected": false,
+    "redgap_gap_type": "rule",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": true
+   },
+   {
+    "technique": "T1567",
+    "name": "Exfiltration Over Web Service",
+    "redgap_detected": true,
+    "redgap_gap_type": "none",
+    "gauntlet_live": null,
+    "gauntlet_splunk_replay": false
+   }
+  ]
+ }
+}

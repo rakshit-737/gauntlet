@@ -1,14 +1,14 @@
 {
  "ruleset": "sigma-all",
  "rules": 2519,
- "datasets": 96,
- "dataset_recall": 0.6979,
- "datasets_any_alert": 87,
- "technique_coverage": 0.8148,
- "techniques": 54,
- "events": 754299,
- "off_target_rules_per_dataset": 3.49,
- "off_target_alerts_per_10k_events": 53.68,
+ "datasets": 98,
+ "dataset_recall": 0.6837,
+ "datasets_any_alert": 88,
+ "technique_coverage": 0.8,
+ "techniques": 55,
+ "events": 757090,
+ "off_target_rules_per_dataset": 3.43,
+ "off_target_alerts_per_10k_events": 53.53,
  "by_tactic": {
   "collection": {
    "covered": 1,
@@ -24,7 +24,7 @@
   },
   "discovery": {
    "covered": 2,
-   "total": 7
+   "total": 8
   },
   "execution": {
    "covered": 6,
@@ -344,8 +344,8 @@
    "technique": "T1069.001",
    "name": "Permission Groups Discovery: Local Groups",
    "tactic": "discovery",
-   "outcome": "detected",
-   "datasets": 1,
+   "outcome": "partial",
+   "datasets": 2,
    "detected": 1,
    "rules": [
     "Malicious PowerShell Commandlets - PoshModule"
@@ -357,6 +357,15 @@
    "tactic": "discovery",
    "outcome": "missed",
    "datasets": 2,
+   "detected": 0,
+   "rules": []
+  },
+  {
+   "technique": "T1087.001",
+   "name": "Account Discovery: Local Account",
+   "tactic": "discovery",
+   "outcome": "missed",
+   "datasets": 1,
    "detected": 0,
    "rules": []
   },
@@ -712,21 +721,41 @@
    ]
   }
  ],
- "exact_id_technique_coverage": 0.6667,
- "seconds": 0.2,
+ "exact_id_technique_coverage": 0.6545,
+ "seconds": 67.9,
+ "fully_detected_coverage": 0.5818,
+ "outcomes": {
+  "detected": 32,
+  "partial": 12,
+  "missed": 11
+ },
  "ci95": {
   "technique_coverage": [
-   0.6916,
-   0.8962
+   0.6764,
+   0.8845
+  ],
+  "fully_detected_coverage": [
+   0.4503,
+   0.7026
+  ],
+  "exact_id_technique_coverage": [
+   0.5225,
+   0.7664
   ],
   "dataset_recall": [
-   0.5999,
-   0.7807
+   0.5862,
+   0.7673
   ]
  },
  "leakage_controlled": {
-  "rules_removed": 41,
-  "technique_coverage": 0.7778,
-  "dataset_recall": 0.6458
+  "rules_removed": 50,
+  "technique_coverage": 0.7636,
+  "technique_coverage_ci95": [
+   0.6365,
+   0.8563
+  ],
+  "dataset_recall": 0.6122,
+  "narrow_pattern_rules_removed": 41,
+  "narrow_pattern_technique_coverage": 0.7636
  }
 }
