@@ -32,8 +32,12 @@ nav:
       - adr/0004-safety-boundary.md
   - Changelog: changelog.md
   - Limitations & roadmap: limitations.md
+hooks:
+  - scripts/mkdocs_hooks.py
 markdown_extensions:
   - admonition
+  - md_in_html
+  - pymdownx.magiclink
   - tables
   - attr_list
   - pymdownx.snippets:
@@ -50,4 +54,4 @@ plugins:
       handlers:
         python:
           paths: [.]
-          options: {show_source: false, docstring_style: google, show_root_heading: true, heading_level: 3}
+          options: {show_source: false, docstring_style: google, show_root_heading: true, heading_level: 3, show_if_no_docstring: true}

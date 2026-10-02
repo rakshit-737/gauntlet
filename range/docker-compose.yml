@@ -1,18 +1,19 @@
-# OPTIONAL, NOT USED BY TESTS. Sketch of the future isolated range (Grade B/C TODO).
+# OPTIONAL, NOT USED BY TESTS. Sketch of an isolated range. The live-telemetry CI job does not
+# use it (it runs allowlisted read-only commands directly on the ephemeral runner, ADR 0005).
 # Hard rules: internal-only network (no egress), no host mounts, no privileged containers.
+x-hardened: &hardened
+  image: alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
+  command: ["sleep", "infinity"]
+  networks: [range]
+  read_only: true
+  cap_drop: [ALL]
+  user: "65534:65534"
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 64
+  mem_limit: 128m
 services:
-  ws01:
-    image: alpine:3.20
-    command: ["sleep", "infinity"]
-    networks: [range]
-    read_only: true
-    cap_drop: [ALL]
-  collector:
-    image: alpine:3.20
-    command: ["sleep", "infinity"]
-    networks: [range]
-    read_only: true
-    cap_drop: [ALL]
+  ws01: *hardened
+  collector: *hardened
 networks:
   range:
     internal: true   # no route to the internet or host LAN

@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use GAUNTLET, please cite it as below."
+title: "GAUNTLET: measured, threat-weighted ATT&CK detection coverage from replayed and live telemetry"
+authors:
+  - name: Rakshit
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/rakshit-737/gauntlet"
+url: "https://rakshit-737.github.io/gauntlet/"
+keywords: [mitre-attack, sigma, detection-engineering, purple-team, auditd, coverage]

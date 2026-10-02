@@ -1,0 +1,19 @@
+name: Bug report
+description: Something in GAUNTLET is wrong (crash, wrong number, broken docs)
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: What happened, description: Command, output and what you expected}
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: Version, description: "`gauntlet --version` and Python version"}
+    validations: {required: true}
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: This report contains no malware, credentials or private telemetry
+          required: true
