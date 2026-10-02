@@ -1,6 +1,6 @@
 # GAUNTLET
 
-**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed at family level vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns** for the full SigmaHQ release package (sigma-all; 38-64 points for sigma-full; the compound sample is 13 techniques).
+**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four recording sets from two public sources (OTRF, Splunk attack_data) and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed at family level vs 80.0% [67.6, 88.4] measured, exact McNemar p = 0.001, 11 discordant techniques all in one direction), and by **58-77 points on Splunk attack_data and OTRF compound campaigns** for the full SigmaHQ release package (sigma-all; 38-64 points for sigma-full; the compound sample is 13 techniques).
 
 It also ranks techniques by what real ATT&CK groups do (CTI prioritization), turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data.
 
@@ -34,12 +34,12 @@ It also ranks techniques by what real ATT&CK groups do (CTI prioritization), tur
 
 ```bash
 python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/rakshit-737/gauntlet@main"
+pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.0"
 gauntlet plan --profile ransomware --top 10       # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5
 ```
 
-The distribution name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Install from this repository. The published container image and v1.0.0 wheel predate current fixes (rules path, bench output) and are not recommended until the next release.
+The distribution name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Install from this repository. Use v1.1.0 or later; the v1.0.0 wheel and image predate the rules-path and bench-output fixes.
 
 <div class="grid cards" markdown>
 

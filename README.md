@@ -7,7 +7,7 @@
 ![ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v19.2-red)
 ![Sigma](https://img.shields.io/badge/SigmaHQ-r2026--07--01-orange)
 
-**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four public attack-recording sources and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed at family level vs 80.0% [67.6, 88.4] measured, exact McNemar p < 0.001), and by **58-77 points on Splunk attack_data and OTRF compound campaigns** for the full SigmaHQ release package (sigma-all; 38-64 points for sigma-full; the compound sample is 13 techniques).
+**GAUNTLET measures ATT&CK detection coverage instead of inferring it from rule tags.** It replays four recording sets from two public sources (OTRF, Splunk attack_data) and live, event-labelled auditd telemetry through unmodified SigmaHQ rules. Tag-claimed coverage overstates measured coverage by **20 points on OTRF** (100% claimed at family level vs 80.0% [67.6, 88.4] measured, exact McNemar p = 0.001, 11 discordant techniques all in one direction), and by **58-77 points on Splunk attack_data and OTRF compound campaigns** for the full SigmaHQ release package (sigma-all; 38-64 points for sigma-full; the compound sample is 13 techniques).
 
 It also ranks techniques by what real ATT&CK groups do, turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data.
 
@@ -19,7 +19,7 @@ It also ranks techniques by what real ATT&CK groups do, turns gaps into the chea
 
 ```bash
 python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/rakshit-737/gauntlet@main"
+pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.0"
 gauntlet plan --profile ransomware --top 10          # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5 # likely next techniques
 ```
@@ -43,7 +43,7 @@ Every number below is in a committed file under [`results/`](results/), produced
 |---|---:|---:|---:|---:|---:|---:|
 | OTRF atomic (Windows) | 98 | 55 | 100.0% | **80.0%** [67.6, 88.4] | 58.2% | 0.001 |
 | OTRF compound LSASS campaigns | 7 | 13 | 100.0% | 23.1% [8.2, 50.3] | 23.1% | 0.002 |
-| Splunk attack_data, Windows | 398 | 188 | 94.7% | 36.2% [29.6, 43.2] | 16.0% | < 1e-30 |
+| Splunk attack_data, Windows | 398 | 188 | 94.7% | 36.2% [29.6, 43.3] | 16.0% | < 1e-30 |
 | Splunk attack_data, Linux | 154 | 55 | 70.9% | 10.9% [5.1, 21.8] | 1.8% | < 1e-9 |
 
 Almost every claimed-but-missed technique is a *rule-logic gap*: the telemetry is in the recording, but no tagged rule matched it. Adding SigmaHQ's low-level and threat-hunting rules (`sigma-full`) raises OTRF coverage to 85.5% and Splunk Windows coverage to 38.8%.
@@ -59,8 +59,8 @@ Almost every claimed-but-missed technique is a *rule-logic gap*: the telemetry i
 
 | Rule set | Rules | Technique coverage | Fully detected | Exact-ID | w/o OTRF-citing rules | Recordings detected | Off-target alerts / 10k events |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| GAUNTLET v0.1 hand-written | 6 | 5.5% [1.9, 14.8] | 1.8% | 3.6% | n/a | 3.1% | 0.22 |
-| SigmaHQ *core* (stable/test, high/critical) | 1,365 | **65.5%** [52.2, 76.6] | 40.0% | 56.4% | 58.2% | 52.0% | 11.1 |
+| GAUNTLET v0.1 hand-written | 6 | 5.5% [1.9, 14.9] | 1.8% | 3.6% | n/a | 3.1% | 0.22 |
+| SigmaHQ *core* (stable/test, high/critical) | 1,365 | **65.5%** [52.3, 76.6] | 40.0% | 56.4% | 58.2% | 52.0% | 11.1 |
 | SigmaHQ release package (medium+) | 2,519 | **80.0%** [67.6, 88.4] | 58.2% | 65.5% | 76.4% | 68.4% | 53.5 |
 
 - Core to all: 8 techniques gained, 0 lost (McNemar p = 0.008), for about 5x the off-target alerts.
@@ -200,6 +200,7 @@ GAUNTLET does not reinvent emulation. Its contribution is measuring, with uncert
 
 - **Small technique universes.** OTRF covers 55 techniques, skewed toward 2019-2020 Empire/Mimikatz-era tradecraft. 80% there is not 80% of ATT&CK. Splunk adds 188 Windows and 55 Linux techniques, but only from recordings with files of at most 2 MB.
 - **Labels.** OTRF and Splunk are labelled per recording. Only the live job has event-level labels, and it covers 4 benign discovery techniques.
+- **Known gaps (v1.1.0).** `results/LIVE.md` is from live run 36995051317, not the latest; generated Wilson upper bounds can be 0.1 point low from double rounding; the architecture diagram labels are small. Details in [docs/limitations.md](docs/limitations.md).
 - **Possible rule/data leakage.** Rules that cite OTRF, Security-Datasets, the Threat Hunter Playbook or the OTRF co-founder's blog and handles are removed in the leakage-controlled column: sigma-core drops from 65.5% to 58.2%. Uncited influence cannot be excluded.
 - **"Off-target" is not a false-positive rate.** It is an upper bound on alert burden in one small lab.
 - **Statistics.** Wilson intervals treat techniques and recordings as independent. The cloud profile (4 groups) cannot distinguish strategies. The cheapest-wins sprint is in-sample, and its out-of-sample check (OTRF to Splunk) shows no transfer.
@@ -210,7 +211,7 @@ GAUNTLET does not reinvent emulation. Its contribution is measuring, with uncert
 
 - [x] Real CTI prevalence and profiles; Sigma scoring on real telemetry; Navigator export, cheapest wins, telemetry ablation
 - [x] CTI vs breadth-first (leave-one-group-out); co-occurrence prediction; CIs and exact tests
-- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0)
+- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0, v1.1.0)
 - [x] OTRF compound and Splunk attack_data sources; claimed vs measured; held-out rule selection
 - [x] Live auditd telemetry with event-level labels (benign allowlist, ADR 0005); published-number comparison
 - [ ] Regression-catch rate across consecutive SigmaHQ releases and rule-mutation testing

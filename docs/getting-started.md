@@ -46,6 +46,6 @@ Load `out/layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https:
 
 ## Docker
 
-The container image `ghcr.io/rakshit-737/gauntlet:latest` was built from v1.0.0, which resolves rules inside site-packages (`sim` reports 0%) and writes `bench` output into site-packages. Do not use it until the next release rebuilds the image; install from `@main` as above instead.
+The container image `ghcr.io/rakshit-737/gauntlet:1.1.0` is built from the v1.1.0 tag. Avoid the older `1.0.0` image: it resolves rules inside site-packages (`sim` reports 0%).
 
 See [Reproduce](reproduce.md) for runtimes and expected outputs, and [Evaluation](evaluation.md) for what the numbers mean.

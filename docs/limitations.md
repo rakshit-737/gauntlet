@@ -12,6 +12,7 @@
 - **In-sample cheapest wins.** The sprint (5.5% to 34.5%) selects and scores rules on the same recordings; the held-out OTRF-to-Splunk selection in [Evaluation](evaluation.md) is the out-of-sample check.
 - **Evaluator divergence.** The in-house Sigma evaluator may differ from production backends in edge cases; 40 Windows rules are unsupported (mostly log sources absent from the recordings); aggregation/correlation rules are not evaluated. auditd has no parent image, so `ParentImage` rules cannot fire on the auditd process view.
 - **Local AV.** Windows Defender may quarantine OTRF recordings; published numbers therefore come from a Linux CI runner.
+- **Known gaps in v1.1.0.** Wilson bounds are rounded to 4 decimals in `stats.wilson` before display, so a few generated upper bounds can be 0.1 point low (hand-corrected in the README headline tables). `results/LIVE.md` comes from live-telemetry run 36995051317, not the latest green run 37016216096, and does not yet note Splunk EXECVE completeness. The architecture diagram's labels are small at content width. The Quickstart's data-dependent steps are exercised by the benchmark and live workflows, not by a wheel-plus-replay smoke test in `ci.yml`.
 
 ## Roadmap
 
@@ -21,7 +22,7 @@
 - [x] Research question: CTI vs breadth-first (leave-one-group-out)
 - [x] Technique co-occurrence prediction
 - [x] 95% CIs for coverage and recall, paired bootstrap and sign tests for prioritization, McNemar tests for rule-set and telemetry differences
-- [x] Docs site, static coverage explorer, container image and tagged releases (v1.0.0)
+- [x] Docs site, static coverage explorer, container image and tagged releases (v1.0.0, v1.1.0)
 - [ ] Run the ART manifest in the isolated Docker/VM range and replay its Sysmon logs (the loader already accepts JSON-lines events). Needs a Windows lab VM with Sysmon; executing atomics on this workstation is out of scope by design (ADR 0004)
 - [x] OTRF compound campaigns and Splunk attack_data as additional sources; claimed-vs-measured analysis; held-out rule selection
 - [x] Live auditd telemetry with event-level labels in CI (benign allowlist, ADR 0005)

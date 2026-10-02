@@ -5,6 +5,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-02
+
 ### Added
 - `gauntlet/formats.py`: XML event (Splunk, Sysmon for Linux) and raw auditd parsing, with a
   synthetic process-creation view from SYSCALL+EXECVE+CWD; Linux Sigma logsources (`sigma-linux`).
@@ -18,6 +20,11 @@ All notable changes to this project are documented here. Format follows
 - CLI `--version`, help text with defaults, `bench --no-cache`.
 - Repo: dependabot, CODEOWNERS, issue/PR templates, CITATION.cff, pip-audit and gitleaks in CI,
   wheel/sdist/container smoke tests, Python 3.10-3.14 matrix.
+
+### Fixed
+- Packaging: legacy rules ship as package data, data/results default to the working directory (the v1.0.0 wheel and image reported 0% in `sim`); distribution renamed to `gauntlet-coverage`, Python 3.11+.
+- CLI creates parent directories for `--out`/`--json`/`--navigator`.
+- Docs: hero wording (two providers), exact p-value, corrected Wilson bounds; install pinned to v1.1.0.
 
 ### Changed
 - Published results now come from a clean Linux runner: 98 OTRF recordings / 55 techniques (was

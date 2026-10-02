@@ -8,9 +8,9 @@ Brackets are 95% Wilson intervals (55 techniques / 98 recordings are small sampl
 
 | Rule set | Rules | Technique coverage | Fully detected | Exact-ID coverage | Coverage w/o OTRF-citing rules | Recordings detected | Off-target rules / recording | Off-target alerts / 10k events |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| legacy | 6 | 5.5% [1.9, 14.8] | 1.8% [0.3, 9.6] | 3.6% [1.0, 12.3] | n/a | 3.1% [1.1, 8.6] | 0.14 | 0.22 |
-| sigma-core | 1365 | 65.5% [52.2, 76.6] | 40.0% [28.1, 53.2] | 56.4% [43.3, 68.6] | 58.2% [45.0, 70.3] (-25 rules) | 52.0% [42.3, 61.7] | 1.52 | 11.13 |
-| sigma-all | 2519 | 80.0% [67.6, 88.4] | 58.2% [45.0, 70.3] | 65.5% [52.2, 76.6] | 76.4% [63.6, 85.6] (-50 rules) | 68.4% [58.6, 76.7] | 3.43 | 53.53 |
+| legacy | 6 | 5.5% [1.9, 14.9] | 1.8% [0.3, 9.6] | 3.6% [1.0, 12.3] | n/a | 3.1% [1.1, 8.6] | 0.14 | 0.22 |
+| sigma-core | 1365 | 65.5% [52.3, 76.6] | 40.0% [28.1, 53.2] | 56.4% [43.3, 68.6] | 58.2% [45.0, 70.3] (-25 rules) | 52.0% [42.3, 61.7] | 1.52 | 11.13 |
+| sigma-all | 2519 | 80.0% [67.6, 88.4] | 58.2% [45.0, 70.3] | 65.5% [52.3, 76.6] | 76.4% [63.6, 85.6] (-50 rules) | 68.4% [58.6, 76.7] | 3.43 | 53.53 |
 
 sigma-core to sigma-all: 8 techniques gained, 0 lost (exact McNemar p = 0.0078).
 

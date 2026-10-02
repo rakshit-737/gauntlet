@@ -3,7 +3,7 @@ message: "If you use GAUNTLET, please cite it as below."
 title: "GAUNTLET: measured, threat-weighted ATT&CK detection coverage from replayed and live telemetry"
 authors:
   - name: Rakshit
-version: 1.0.0
+version: 1.1.0
 license: MIT
 repository-code: "https://github.com/rakshit-737/gauntlet"
 url: "https://rakshit-737.github.io/gauntlet/"
