@@ -341,8 +341,21 @@ def get_splunk(f: Fetcher) -> None:
     print(f"  {len(man['recordings'])} recordings, {len(set(jobs))} files")
 
 
+CTID_SHA = "87cc589e"  # center-for-threat-informed-defense/top-attack-techniques
+REDGAP_SHA = "a9bcbf2caad4e6effcc35cf1279e9dff470d8f74"
+
+
+def get_published(f: Fetcher) -> None:
+    """Published comparators: CTID Top ATT&CK Techniques (Apache-2.0) and RedGap coverage (MIT)."""
+    print("[published] CTID Top ATT&CK Techniques", CTID_SHA, "+ RedGap", REDGAP_SHA[:10])
+    f.fetch("https://raw.githubusercontent.com/center-for-threat-informed-defense/top-attack-techniques/"
+            f"{CTID_SHA}/src/data/Techniques.json", "published/ctid-techniques.json")
+    f.fetch(f"https://raw.githubusercontent.com/befnoz/redgap/{REDGAP_SHA}/docs/benchmarks/coverage.json",
+            "published/redgap-coverage.json")
+
+
 SOURCES = {"attack": get_attack, "sigma": get_sigma, "art": get_art, "mordor": get_mordor,
-           "mordor-compound": get_mordor_compound, "splunk": get_splunk}
+           "mordor-compound": get_mordor_compound, "splunk": get_splunk, "published": get_published}
 DEFAULT_SOURCES = ("attack", "sigma", "art", "mordor")  # what the v1.0 benchmark uses
 
 

@@ -244,6 +244,20 @@ def cmd_live(a) -> int:
     return 0
 
 
+def cmd_compare(a) -> int:
+    from . import published
+
+    root = a.data_dir or paths.data_dir()
+    pub = root / "published"
+    if not (pub / "ctid-techniques.json").exists():
+        print(f"missing {pub}; run scripts/download_data.py --only published", file=sys.stderr)
+        return 1
+    published.run(pub / "ctid-techniques.json", pub / "redgap-coverage.json", a.results,
+                  live_path=a.results / "live.json", extended_path=a.results / "extended.json")
+    print(f"-> {a.results / 'PUBLISHED.md'}")
+    return 0
+
+
 def cmd_kb(a) -> int:
     from .attack import load_stix, write_kb
 
@@ -325,6 +339,8 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--full-rules", type=Path, help="SigmaHQ checkout (adds low-level and threat-hunting rules)")
     pl.add_argument("--workers", type=int, help="replay processes for the Splunk comparison")
     pl.add_argument("--out", type=Path, default=Path("live-out"), help="output directory")
+    pc = sub.add_parser("compare", help="compare measured coverage with published numbers (CTID, RedGap)")
+    pc.add_argument("--results", type=Path, default=Path("results"), help="results directory to read and write")
     pk = sub.add_parser("kb", help="rebuild the shipped ATT&CK / ART derivatives from the downloads")
     pk.add_argument("--stix", type=Path, help="ATT&CK STIX bundle (default: downloaded v19.2)")
     pk.add_argument("--art-csv", type=Path, help="Atomic Red Team windows-index.csv")
@@ -342,7 +358,7 @@ def main(argv: list[str] | None = None) -> int:
     a = p.parse_args(argv)
     handlers = {"profiles": cmd_profiles, "plan": cmd_plan, "manifest": cmd_manifest, "predict": cmd_predict,
                 "replay": cmd_replay, "bench": cmd_bench, "extended": cmd_extended,
-                "live": cmd_live, "kb": cmd_kb, "run": cmd_sim, "sim": cmd_sim}
+                "live": cmd_live, "compare": cmd_compare, "kb": cmd_kb, "run": cmd_sim, "sim": cmd_sim}
     try:
         return handlers[a.cmd](a)
     except KeyError as e:

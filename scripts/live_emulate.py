@@ -20,6 +20,7 @@ from pathlib import Path
 # (argv, ATT&CK technique). Changing this list needs CODEOWNERS review.
 ALLOWLIST: tuple[tuple[tuple[str, ...], str], ...] = (
     (("whoami",), "T1033"),
+    (("/usr/bin/whoami",), "T1033"),  # same command invoked by absolute path (argv[0] differs)
     (("id",), "T1033"),
     (("uname", "-a"), "T1082"),
     (("hostname",), "T1082"),
@@ -34,7 +35,8 @@ FORBIDDEN = {"curl", "wget", "nc", "ncat", "ssh", "scp", "sudo", "su", "useradd"
 
 def check_allowlist() -> None:
     for argv, tech in ALLOWLIST:
-        if argv[0] in FORBIDDEN or any(a.startswith(("-e", "-r")) for a in argv if argv[0] == "crontab"):
+        name = os.path.basename(argv[0])
+        if name in FORBIDDEN or (name == "crontab" and any(a.startswith(("-e", "-r")) for a in argv)):
             raise SystemExit(f"forbidden command in allowlist: {argv}")
         if any(x in " ".join(argv) for x in ("/etc/shadow", "id_rsa", ".ssh", ">", "|", ";", "&")):
             raise SystemExit(f"forbidden argument in allowlist: {argv}")
@@ -53,11 +55,14 @@ def main(out: str = "live-out/labels.json") -> int:
     rows = []
     for argv, tech in ALLOWLIST:
         t = time.time()
-        exe = shutil.which(argv[0])  # absolute path: one execve, not one failed attempt per PATH entry
+        # resolve once (a single execve instead of one failed attempt per PATH entry) but keep argv[0]
+        # exactly as written, as a shell would: auditd rules often match EXECVE a0 literally
+        exe = shutil.which(argv[0])
         if exe is None:
             rows.append({"argv": list(argv), "technique": tech, "pid": None, "start": t, "returncode": None})
             continue
-        p = subprocess.Popen([exe, *argv[1:]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False)  # noqa: S603
+        p = subprocess.Popen(list(argv), executable=exe, stdout=subprocess.DEVNULL,  # noqa: S603
+                             stderr=subprocess.DEVNULL, shell=False)
         try:
             rc = p.wait(timeout=20)
         except subprocess.TimeoutExpired:

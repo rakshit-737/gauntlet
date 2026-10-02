@@ -99,7 +99,7 @@ def test_committed_splunk_manifest_paths_are_safe():
 def test_live_allowlist_is_benign():
     em = _load_script("live_emulate")
     em.check_allowlist()
-    bins = {argv[0] for argv, _ in em.ALLOWLIST}
+    bins = {Path(argv[0]).name for argv, _ in em.ALLOWLIST}
     assert bins <= {"whoami", "id", "uname", "hostname", "cat", "ps", "crontab", "ls"}
     assert ("crontab", "-l") in {a for a, _ in em.ALLOWLIST}
     assert em.main("x.json") == 3 or __import__("os").environ.get("GITHUB_ACTIONS") == "true"
@@ -110,3 +110,23 @@ def test_fetcher_refuses_path_escape(tmp_path):
     f = dl.Fetcher(tmp_path, {})
     with pytest.raises(ValueError):
         f.fetch("https://example.invalid/x", "../evil.txt")
+
+
+def test_published_comparisons():
+    from gauntlet import published
+
+    ctid = [{"tid": "T1003", "has_sigma": True}, {"tid": "T1012", "has_sigma": True},
+            {"tid": "T1135", "has_sigma": False}]
+    rows = [{"technique": "T1003.001", "outcome": "detected"}, {"technique": "T1012", "outcome": "missed"},
+            {"technique": "T1135", "outcome": "partial"}, {"technique": "T9999", "outcome": "missed"}]
+    c = published.ctid_vs_measured(ctid, rows)
+    assert c["techniques_compared"] == 3 and c["claimed_not_measured"] == ["T1012"]
+    assert c["measured_not_claimed"] == ["T1135"]
+    rg = {"summary": {"techniques": 2, "detected": 1},
+          "techniques": [{"id": "T1033", "name": "x", "detected": False, "gap_type": "rule"},
+                         {"id": "T1082", "name": "y", "detected": True, "gap_type": "none"}]}
+    live_rep = {"rulesets": {"sigma-full": {"techniques": {"T1033": {"measured": True}}}}}
+    r = published.redgap_vs_live(rg, live_rep, [{"technique": "T1082", "measured": False}])
+    assert [(x["technique"], x["gauntlet_live"], x["gauntlet_splunk_replay"]) for x in r["rows"]] == [
+        ("T1033", {"sigma-full": True}, None), ("T1082", None, False)]
+    assert "RedGap publishes 1/2" in published.render_md({"ctid": c, "redgap": r})
