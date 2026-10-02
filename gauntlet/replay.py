@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import mordor, sigma
-from .sigma import SECURITY, SECURITY_4688_MAP, WINDOWS_PREFIXES, EventView, SigmaRule
+from .sigma import LINUX_PREFIXES, SECURITY, SECURITY_4688_MAP, WINDOWS_PREFIXES, EventView, SigmaRule
 
 
 @dataclass
@@ -96,7 +96,8 @@ def replay_dataset(index: RuleIndex, ds: mordor.Dataset) -> ReplayResult:
 
 # ---------------------------------------------------------------- rule-set specs
 def load_ruleset(spec: str) -> list[SigmaRule]:
-    """Rule-set spec: ``sigma-all:<zip-or-dir>``, ``sigma-core:<zip-or-dir>`` or ``legacy:<dir>``.
+    """Rule-set spec: ``sigma-all:<zip-or-dir>``, ``sigma-core:<zip-or-dir>``,
+    ``sigma-linux:<zip-or-dir>`` (rules/linux only) or ``legacy:<dir>``.
 
     ``sigma-core`` keeps rules with status stable/test and level high/critical --
     roughly what a SOC would page on.
@@ -106,9 +107,10 @@ def load_ruleset(spec: str) -> list[SigmaRule]:
         from .detect import legacy_as_sigma, load_rules
 
         return [r for r in (legacy_as_sigma(x) for x in load_rules(path)) if r is not None]
-    if kind not in ("sigma-all", "sigma-core"):
+    if kind not in ("sigma-all", "sigma-core", "sigma-linux"):
         raise ValueError(f"unknown ruleset kind {kind!r}")
-    rs = sigma.load_rules(path, subdir_prefix=WINDOWS_PREFIXES if path.endswith(".zip") else "")
+    prefixes = LINUX_PREFIXES if kind == "sigma-linux" else WINDOWS_PREFIXES
+    rs = sigma.load_rules(path, subdir_prefix=prefixes if path.endswith(".zip") else "")
     rules = rs.rules
     if kind == "sigma-core":
         rules = [r for r in rules if r.status in ("stable", "test") and r.level in ("high", "critical")]

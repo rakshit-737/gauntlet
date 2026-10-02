@@ -109,7 +109,8 @@ def test_condition_list_is_or():
 @pytest.mark.parametrize("det,ls", [
     ({"sel": {"a": 1}, "condition": "sel | count() by b > 5"}, PROC),
     ({"sel": {"a|expand": "%x%"}, "condition": "sel"}, PROC),
-    ({"sel": {"a": 1}, "condition": "sel"}, {"product": "linux", "category": "process_creation"}),
+    ({"sel": {"a": 1}, "condition": "sel"}, {"product": "macos", "category": "process_creation"}),
+    ({"sel": {"a": 1}, "condition": "sel"}, {"product": "linux", "service": "syslog"}),
     ({"sel": {"a": 1}, "condition": "sel"}, {"product": "windows", "category": "no_such_cat"}),
     ({"sel": {"a": 1}, "condition": "nope"}, PROC),
 ])

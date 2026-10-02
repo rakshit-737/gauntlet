@@ -10,7 +10,6 @@ what makes them useful for estimating both recall and alert noise.
 """
 from __future__ import annotations
 
-import json
 import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -112,13 +111,7 @@ def iter_events(path: str | Path) -> Iterator[dict[str, Any]]:
 
 
 def _iter_lines(fh) -> Iterator[dict[str, Any]]:
-    for raw in fh:
-        raw = raw.strip()
-        if not raw:
-            continue
-        try:
-            d = json.loads(raw)
-        except ValueError:
-            continue
-        if isinstance(d, dict):
-            yield d
+    """JSON lines (OTRF), XML event lines (Splunk / Sysmon for Linux) or raw auditd lines."""
+    from .formats import iter_text_lines
+
+    yield from iter_text_lines(raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw for raw in fh)

@@ -16,7 +16,8 @@ what a coverage benchmark needs. Supported:
 
 Not supported (the rule is reported as *unsupported* rather than silently
 passing): aggregations (``| count()``), correlation rules, ``expand``
-placeholders, non-Windows products. See docs/adr/0002-sigma-evaluator.md.
+placeholders, products other than Windows and Linux (Linux: Sysmon for Linux
+categories and the auditd service only). See docs/adr/0002-sigma-evaluator.md.
 """
 from __future__ import annotations
 
@@ -104,8 +105,26 @@ CATEGORY_TARGETS: dict[str, list[tuple[str, tuple[int, ...]]]] = {
     "ps_classic_script": [(PS_CLASSIC, (800,))],
 }
 
-# Sysmon-style field names -> Security 4688 names (pySigma windows audit mapping)
 WINDOWS_PREFIXES = ("rules/windows/", "rules-emerging-threats/")
+LINUX_PREFIXES = ("rules/linux/",)
+
+# Linux telemetry channels (lower-case). Sysmon for Linux writes Windows-style XML events;
+# auditd records are one channel; ``AUDITD_EXEC`` is a process-creation view GAUNTLET
+# synthesises from auditd SYSCALL+EXECVE(+CWD) records (see gauntlet/formats.py).
+LINUX_SYSMON = "linux-sysmon/operational"
+AUDITD = "auditd"
+AUDITD_EXEC = "auditd-exec"
+
+LINUX_CATEGORY_TARGETS: dict[str, list[tuple[str, tuple[int, ...]]]] = {
+    "process_creation": [(LINUX_SYSMON, (1,)), (AUDITD_EXEC, (1,))],
+    "network_connection": [(LINUX_SYSMON, (3,))],
+    "process_termination": [(LINUX_SYSMON, (5,))],
+    "file_event": [(LINUX_SYSMON, (11,))],
+    "file_delete": [(LINUX_SYSMON, (23,))],
+}
+LINUX_SERVICE_CHANNELS: dict[str, str] = {"auditd": AUDITD}
+
+# Sysmon-style field names -> Security 4688 names (pySigma windows audit mapping)
 
 SECURITY_4688_MAP = {
     "image": "newprocessname",
@@ -545,6 +564,14 @@ def resolve_logsource(ls: dict[str, Any]) -> tuple[Target, ...]:
     product = str(ls.get("product", "")).lower()
     cat = str(ls.get("category", "")).lower() if ls.get("category") else ""
     svc = str(ls.get("service", "")).lower() if ls.get("service") else ""
+    if product == "linux":
+        if cat:
+            if cat not in LINUX_CATEGORY_TARGETS:
+                raise UnsupportedRule(f"linux category {cat}")
+            return tuple((c, e) for c, eids in LINUX_CATEGORY_TARGETS[cat] for e in eids)
+        if svc in LINUX_SERVICE_CHANNELS:
+            return ((LINUX_SERVICE_CHANNELS[svc], None),)
+        raise UnsupportedRule(f"linux service {svc or '?'}")
     if product != "windows":
         raise UnsupportedRule(f"product {product or '?'}")
     if cat:
