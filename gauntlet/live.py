@@ -92,7 +92,8 @@ def render_md(rep: dict[str, Any]) -> str:
     for name, r in rep["rulesets"].items():
         L += [f"## Rule set: {name} ({r['rules']} Linux rules)", "",
               f"{r['audit_records']} audit records -> {r['labelled_events'] + r['background_events']} events "
-              f"({r['labelled_events']} labelled to allowlisted commands, {r['background_events']} background). Live technique coverage "
+              f"({r['labelled_events']} labelled to allowlisted commands, {r['background_events']} background). "
+              f"Live technique coverage "
               f"{100 * r['technique_coverage']:.0f}% of {len(r['techniques'])} techniques "
               f"(claimed by tags: {100 * r['claimed_coverage']:.0f}%). Rules firing on background: "
               f"{len(r['background_rules_fired'])}.", "",
