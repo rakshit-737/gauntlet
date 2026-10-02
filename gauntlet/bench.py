@@ -114,10 +114,11 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         from .sigma import WINDOWS_PREFIXES, load_rules
         rs = load_rules(paths.sigma_zip(root), subdir_prefix=WINDOWS_PREFIXES)
         reasons: dict[str, int] = {}
-        windows_unsupported = [w for w in rs.unsupported.values() if not w.startswith("product")]
+        windows_unsupported = [w for w in rs.unsupported.values() if not w.startswith(("product", "linux"))]
+        windows_rules = [r for r in rs.rules if str(r.logsource.get("product", "")).lower() == "windows"]
         for why in windows_unsupported:
             reasons[why] = reasons.get(why, 0) + 1
-        report["sigma_parse"] = {"supported": len(rs.rules), "unsupported": len(windows_unsupported),
+        report["sigma_parse"] = {"supported": len(windows_rules), "unsupported": len(windows_unsupported),
                                  "top_unsupported_reasons": dict(sorted(reasons.items(), key=lambda x: -x[1])[:8])}
 
     # ---------------------------------------------------------------- CTI weighting
@@ -195,6 +196,12 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
 
 def _pct(x: float) -> str:
     return f"{100 * x:.1f}%"
+
+
+def _p(p: float | None) -> str:
+    if p is None:
+        return "n/a"
+    return "<0.0001" if p < 1e-4 else f"{p:.3g}"
 
 
 def _ci(ci) -> str:
@@ -290,7 +297,7 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
                 a_s = f"{a['mean_diff']:+.1f} (per group: {', '.join(f'{x:+.0f}' for x in a['per_unit_diffs'])})"
                 b_s = f"{b['mean_diff']:+.3f}"
             L.append(f"| {p} (n={d['groups_evaluated']}) | {c.replace('_', ' ')} | {a_s} "
-                     f"| {a.get('sign_test_p', float('nan')):.3g} | {b_s} |")
+                     f"| {_p(a.get('sign_test_p'))} | {b_s} |")
     L += ["", "## Next-technique prediction (co-occurrence vs popularity, leave-one-group-out)", "",
           "| Level | Model | recall@5 | recall@10 | recall@20 | MRR |", "|---|---|---:|---:|---:|---:|"]
     for lvl, d in r["prediction"].items():

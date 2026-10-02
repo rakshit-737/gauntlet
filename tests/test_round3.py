@@ -130,3 +130,16 @@ def test_published_comparisons():
     assert [(x["technique"], x["gauntlet_live"], x["gauntlet_splunk_replay"]) for x in r["rows"]] == [
         ("T1033", {"sigma-full": True}, None), ("T1082", None, False)]
     assert "RedGap publishes 1/2" in published.render_md({"ctid": c, "redgap": r})
+
+
+def test_held_out_selection_runs():
+    from gauntlet.attack import load_kb
+
+    rules = {r.id: r for r in [lrule("a", "T1033", {"Image": "x"}), lrule("b", "T1082", {"Image": "y"})]}
+    tr = [ReplayResult("d1", ("T1033",), 1, {}, {"a": {"c": 1}}),
+          ReplayResult("d2", ("T1082",), 1, {}, {"b": {"c": 1}})]
+    te = [ReplayResult("e1", ("T1033",), 1, {}, {"a": {"c": 1}}), ReplayResult("e2", ("T1082",), 1, {}, {})]
+    out = extended.held_out_selection((tr, rules), (te, rules), load_kb(), k=1, seeds=10)
+    assert out["candidate_rules"] == 2
+    assert out["greedy_unweighted"]["test_technique_coverage"] in (0.0, 0.5)
+    assert 0.0 <= out["random"]["test_technique_coverage_mean"] <= 0.5

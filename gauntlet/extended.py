@@ -35,7 +35,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from . import coverage, mordor, paths, replay, stats
+from . import coverage, mordor, paths, prioritize, replay, stats
 from .attack import KnowledgeBase, load_kb, load_stix, parent
 from .sigma import SigmaRule
 
@@ -108,6 +108,7 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
     if full_rules:
         specs["windows"]["sigma-full"] = f"sigma-all:{full_rules}"
         specs["linux"]["sigma-full"] = f"sigma-linux:{full_rules}"
+    kept: dict[tuple[str, str], tuple[list[replay.ReplayResult], dict[str, SigmaRule]]] = {}
     report: dict[str, Any] = {"sigma_release": paths.SIGMA_TAG, "attack_version": kb.version,
                               "skipped_unavailable": {}, "sources": {}}
     for k, v in (("otrf", mordor.load_catalog(root)), ("otrf-compound", mordor.load_compound(root)),
@@ -136,13 +137,62 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
             d["claimed_vs_measured"] = claimed_vs_measured(res, rules, kb)
             d["record_types"] = _record_types(res)
             entry["rulesets"][name] = d
+            kept[(src, name)] = (res, rules)
         report["sources"][src] = entry
     report["cross_dataset"] = _agreement(report)
+    if ("otrf", "sigma-all") in kept and ("splunk-windows", "sigma-all") in kept:
+        report["held_out_selection"] = held_out_selection(kept[("otrf", "sigma-all")],
+                                                          kept[("splunk-windows", "sigma-all")], kb)
     report["runtime_seconds"] = round(time.time() - t0, 1)
     (out / "extended.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
     (out / "EXTENDED.md").write_text(render_md(report), encoding="utf-8")
+    try:
+        from .figures import claimed_vs_measured as fig
+        fig(report, out)
+    except ImportError as e:  # matplotlib optional
+        print(f"skipping figure: {e}")
     print(f"done in {report['runtime_seconds']}s -> {out / 'EXTENDED.md'}")
     return report
+
+
+def held_out_selection(train: tuple[list[replay.ReplayResult], dict[str, SigmaRule]],
+                       test: tuple[list[replay.ReplayResult], dict[str, SigmaRule]],
+                       kb: KnowledgeBase, k: int = 10, seeds: int = 200) -> dict[str, Any]:
+    """Select k rules on OTRF (train), score them on Splunk Windows recordings (test).
+
+    Compares CTI-weighted greedy (ransomware relevance), unweighted greedy and random draws of k
+    rules from those that fired on-target on OTRF. Coverage is technique coverage on the test set.
+    """
+    import random
+
+    tr_res, rules = train
+    te_res, _ = test
+    rel = prioritize.relevance(prioritize.profile_groups(kb, "ransomware"))
+
+    def test_cov(ids: set[str]) -> tuple[float, float]:
+        s = coverage.score("sel", te_res, {i: rules[i] for i in ids if i in rules}, kb)
+        return s.technique_coverage, s.weighted(rel)
+
+    pool = sorted({r for res in tr_res for r in res.fired() if r in rules and coverage.on_target(
+        rules[r].techniques, res.techniques)})
+    out: dict[str, Any] = {"k": k, "train": "otrf", "test": "splunk-windows", "candidate_rules": len(pool)}
+    for name, w in (("greedy_cti_weighted", rel), ("greedy_unweighted", None)):
+        sel = {x["id"] for x in coverage.greedy_rule_selection(tr_res, rules, w, top=k, kb=kb)}
+        c, cw = test_cov(sel)
+        out[name] = {"test_technique_coverage": round(c, 4), "test_ransomware_weighted": round(cw, 4)}
+    rnd = random.Random(0)
+    draws = [test_cov(set(rnd.sample(pool, min(k, len(pool))))) for _ in range(seeds)]
+    cs, ws = sorted(d[0] for d in draws), sorted(d[1] for d in draws)
+    q = lambda v, p: v[min(len(v) - 1, int(p * len(v)))]  # noqa: E731
+    out["random"] = {"test_technique_coverage_mean": round(sum(cs) / len(cs), 4),
+                     "test_technique_coverage_95": [round(q(cs, .025), 4), round(q(cs, .975), 4)],
+                     "test_ransomware_weighted_mean": round(sum(ws) / len(ws), 4),
+                     "test_ransomware_weighted_95": [round(q(ws, .025), 4), round(q(ws, .975), 4)],
+                     "draws": seeds}
+    for name in ("greedy_cti_weighted", "greedy_unweighted"):
+        v = out[name]["test_ransomware_weighted"]
+        out[name]["random_draws_at_or_above"] = round(sum(x >= v for x in ws) / len(ws), 4)
+    return out
 
 
 def _record_types(results: Sequence[replay.ReplayResult]) -> dict[str, int]:
@@ -200,6 +250,21 @@ def render_md(r: dict[str, Any]) -> str:
               f"measured outcome agrees on {x['agree']}. Detected only on OTRF: "
               f"{', '.join(x['otrf_only_detected']) or 'none'}; only on Splunk: "
               f"{', '.join(x['splunk_only_detected']) or 'none'}."]
+    h = r.get("held_out_selection")
+    if h:
+        g, u, rn = h["greedy_cti_weighted"], h["greedy_unweighted"], h["random"]
+        L += ["", f"## Held-out rule selection: pick {h['k']} rules on OTRF, test on Splunk Windows", "",
+              "| Selection on OTRF | Test technique coverage | Test ransomware-weighted coverage "
+              "| Random draws at or above |", "|---|---:|---:|---:|",
+              f"| CTI-weighted greedy | {_pct(g['test_technique_coverage'])} | {_pct(g['test_ransomware_weighted'])} "
+              f"| {_pct(g['random_draws_at_or_above'])} |",
+              f"| Unweighted greedy | {_pct(u['test_technique_coverage'])} | {_pct(u['test_ransomware_weighted'])} "
+              f"| {_pct(u['random_draws_at_or_above'])} |",
+              f"| Random {h['k']} of {h['candidate_rules']} OTRF-firing rules ({rn['draws']} draws, mean "
+              f"[2.5, 97.5 pct]) | {_pct(rn['test_technique_coverage_mean'])} "
+              f"[{_pct(rn['test_technique_coverage_95'][0])}, {_pct(rn['test_technique_coverage_95'][1])}] "
+              f"| {_pct(rn['test_ransomware_weighted_mean'])} [{_pct(rn['test_ransomware_weighted_95'][0])}, "
+              f"{_pct(rn['test_ransomware_weighted_95'][1])}] | - |"]
     sk = {k: v for k, v in r.get("skipped_unavailable", {}).items() if v}
     L += ["", "Recordings skipped because a file was missing or unreadable: "
           + ("; ".join(f"{k}: {', '.join(v)}" for k, v in sk.items()) if sk else "none") + "."]

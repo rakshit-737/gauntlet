@@ -125,7 +125,7 @@ def _paired(a: list[float], b: list[float]) -> dict:
     out = stats.paired_bootstrap_ci(a, b)
     diffs = [round(x - y, 4) for x, y in zip(a, b, strict=True)]
     nz = [d for d in diffs if d != 0]
-    out["sign_test_p"] = round(stats.binom_two_sided(sum(d > 0 for d in nz), len(nz)), 4)
+    out["sign_test_p"] = stats.binom_two_sided(sum(d > 0 for d in nz), len(nz))
     out["ci_reliable"] = len(diffs) >= SMALL_N
     if len(diffs) < SMALL_N:
         out["per_unit_diffs"] = diffs

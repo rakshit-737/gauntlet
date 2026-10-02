@@ -82,3 +82,31 @@ def prioritization_curves(report: dict[str, Any], out: Path, profile: str = "ran
 
 def make_all(report: dict[str, Any], summaries: dict[str, Any], out: Path) -> list[Path]:
     return [tactic_coverage(summaries, out), prioritization_curves(report, out)]
+
+
+def claimed_vs_measured(ext: dict[str, Any], out: Path, ruleset: str = "sigma-all") -> Path:
+    """Dumbbell chart: tag-claimed vs measured technique coverage per data source, with Wilson CIs."""
+    rows = [(src, e["rulesets"][ruleset]["claimed_vs_measured"]) for src, e in ext["sources"].items()
+            if e.get("rulesets", {}).get(ruleset)]
+    fig, ax = plt.subplots(figsize=(7.5, 0.6 * len(rows) + 1.5), dpi=110)
+    for i, (_src, cm) in enumerate(rows):
+        c, m = 100 * cm["claimed_rate"], 100 * cm["measured_rate"]
+        lo, hi = (100 * x for x in cm["measured_ci95"])
+        ax.plot([m, c], [i, i], color=GRID, linewidth=6, solid_capstyle="round", zorder=1)
+        ax.plot([lo, hi], [i, i], color=SERIES[0], linewidth=1.5, zorder=2)
+        ax.scatter([c], [i], color=SERIES[1], s=60, zorder=3, label="claimed by rule tags" if i == 0 else None)
+        ax.scatter([m], [i], color=SERIES[0], s=60, zorder=3, label="measured (95% CI)" if i == 0 else None)
+        ax.text(c + 1.5, i, f"+{c - m:.0f} pts", va="center", fontsize=8, color=MUTED)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([f"{s} (n={cm['techniques']})" for s, cm in rows], color=INK)
+    ax.invert_yaxis()
+    ax.set_xlim(0, 112)
+    ax.set_xlabel("recorded techniques covered (%)", color=MUTED, fontsize=9)
+    ax.set_title(f"Claimed vs measured ATT&CK coverage, SigmaHQ {ruleset}", color=INK, fontsize=11, loc="left")
+    _style(ax)
+    ax.legend(frameon=False, fontsize=9, loc="upper left", bbox_to_anchor=(1.01, 1))
+    fig.tight_layout()
+    p = out / "claimed_vs_measured.png"
+    fig.savefig(p)
+    plt.close(fig)
+    return p
