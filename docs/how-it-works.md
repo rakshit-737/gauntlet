@@ -20,7 +20,7 @@ flowchart TB
 gauntlet plan --profile ransomware --top 5
 ```
 
-Leave-one-group-out testing shows that this ordering reaches 80% of a held-out actor's techniques in 118.9 emulations, against 194.4 for ATT&CK-ID (breadth-first) order. Global prevalence explains most of that gain: see [Evaluation](evaluation.md#prioritization).
+Leave-one-group-out testing shows that this ordering reaches 80% of a held-out ransomware actor's techniques in 118.9 emulations (95% bootstrap [114.3, 123.3]), against 194.4 [185.8, 202.0] for ATT&CK-ID (breadth-first) order. Global prevalence explains most of that gain: see [Evaluation](evaluation.md#prioritization).
 
 ![CTI vs breadth-first](assets/results/prioritization_ransomware.png)
 

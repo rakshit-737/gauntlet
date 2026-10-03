@@ -5,6 +5,48 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+- `gauntlet selftest`: evaluator fidelity control. Every SigmaHQ positive regression sample is
+  replayed through the rule it was recorded for: 197 of 197 fire (95% Wilson [98.1, 100.0]).
+- Splunk replay completeness in `live.json` / `LIVE.md`: per recording sourcetype, EXECVE/SYSCALL
+  records, Sysmon EventID 1 events and the rules that fired. 8 of the 12 Splunk Linux recordings
+  of the live techniques are auditd extracts without EXECVE; the 4 Sysmon for Linux recordings
+  have process-creation events, but the rules that fire are tagged T1087.001 / T1007.
+- Exact-ID claimed-vs-measured variant, unparsed-channel counts, an interval for every reported
+  statistic (Wilson, percentile bootstrap for weighted coverage, paired bootstrap for
+  breadth-vs-random and MRR), and the GitHub run id and commit in every generated result file.
+- `scripts/verify_results.py` (field-by-field check of a reproduction), `scripts/live_history.py`
+  and `results/live-history.json` (identical per-command outcomes on 4 live runs).
+- CI: replay tests against the installed wheel; docs-sync tests for the architecture diagrams.
+
+### Changed
+- Nested comparisons (claimed vs measured, core vs all, channel ablation, leakage control) are
+  reported as points with a Wilson interval instead of an exact McNemar p, which only restated
+  the discordant count. McNemar is kept for non-nested comparisons (CTID, OTRF vs Splunk).
+- Gap classes check a tagged rule's (channel, EventID) target, not only its channel.
+- Splunk files are routed by sourcetype; mixed recordings are scored with both platforms' rules.
+  **Splunk Windows numbers got slightly worse**: 398 to 414 recordings, 188 to 195 techniques,
+  measured coverage 36.2% to 35.9%, overstatement 58.5 to 59.0 points (sigma-full 38.8% to
+  37.9%). OTRF, compound and Splunk Linux coverage is unchanged; with the stricter (channel,
+  EventID) check, Splunk Linux gap classes moved from 6 telemetry / 27 rule-logic to 10 / 23
+  (sigma-all).
+- `benchmark` workflow: pipefail, fresh output directory, selftest, compare and the README replay
+  example, an assertion that every file was written by the run; artefacts kept 90 days (live
+  too). Results regenerated from benchmark run 37094883465 and live-telemetry run 37092465944.
+- Architecture diagram split into Plan and Measure diagrams with module-name labels.
+- `sim --disable-source` and `predict --observed` reject unknown values.
+
+### Fixed
+- `stats.wilson` rounded bounds to 4 decimals before the writers rounded them to 0.1 point; three
+  published lower bounds were 0.1 too high (3/98: 1.0 not 1.1; 42/55: 63.7 not 63.6; 73/188: 32.2
+  not 32.1) and the explorer showed 14.8 / 52.2 where the README said 14.9 / 52.3. Intervals are
+  now computed from raw counts and rounded once.
+- Downloader: a file blocked by AV while still a `.part` crashed the download instead of being
+  recorded in `.av-skipped.json`; the data-dir check could fail under concurrent downloads on
+  Windows.
+- Sigma evaluator: event fields with spaces (Defender's "Threat Name") now match rule fields
+  (ThreatName).
+
 ## [1.1.0] - 2026-10-02
 
 ### Added

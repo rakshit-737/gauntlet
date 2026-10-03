@@ -22,7 +22,7 @@ gauntlet bench --out out                                     # OTRF benchmark
 
 Exact commands, expected outputs and runtimes for every published number are in [Reproduce](reproduce.md).
 
-Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged, from v1.0.0):
+Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged; captured in benchmark run 37094883465, full output in [`results/replay-ransomware-top15.txt`](https://github.com/rakshit-737/gauntlet/blob/main/results/replay-ransomware-top15.txt)):
 
 ```text
 Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 groups) through sigma-core ...
@@ -33,14 +33,15 @@ Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 
 [+] T1003       0.549  credential-access     detected DPAPI Domain Backup Key Extraction
 [+] T1021       0.535  lateral-movement      detected CobaltStrike Service Installations - Security; ...
 [-] T1547.001   0.494  persistence           missed   -
+[~] T1112       0.481  persistence           partial  NetNTLM Downgrade Attack; NetNTLM Downgrade Attack - Registry
 [+] T1543.003   0.473  persistence           detected Suspicious Service Path Modification
-[~] T1003.001   0.418  credential-access     partial  HackTool - Dumpert Process Dumper Default File; ...
-[-] T1135       0.403  discovery             missed   -
+[~] T1047       0.432  execution             partial  T1047 Wmiprvse Wbemcomn DLL Hijack; Wmiprvse Wbemcomn DLL Hijack
 ...
+
 Technique coverage: 56%  threat-weighted: 61%  off-target rules/recording: 1.5
 ```
 
-The 56% is over the 18 techniques labelled on the 33 chosen recordings, which include 3 co-labelled techniques beyond the 15 prioritized ones; over the 15 prioritized techniques alone it is 9/15 = 60%. For T1547.001 the full SigmaHQ package *does* detect both recordings, but only with medium-level rules that the *core* filter drops.
+The 56% is 10 of the 18 techniques labelled on the 33 chosen recordings (Wilson [33.7, 75.4]), which include 3 co-labelled techniques beyond the 15 prioritized ones; over the 15 prioritized techniques alone it is 9 of 15 = 60% [35.7, 80.2]. For T1547.001 the full SigmaHQ package *does* detect both recordings, but only with medium-level rules that the *core* filter drops.
 
 Load `out/layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to view coverage as a heatmap: green = detected, amber = partial, red = missed.
 
