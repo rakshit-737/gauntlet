@@ -1,17 +1,25 @@
 name: benchmark
 # Cold, from-scratch benchmark on a clean Linux runner (no local AV quarantine):
-# downloads every pinned source, verifies checksums, runs `bench` and `extended`, and uploads
-# results/ as an artefact. Only the small result files are committed to the repo.
+# downloads every pinned source, verifies checksums, runs `bench`, `extended`, `selftest`,
+# `compare` and the README replay example into a FRESH directory, checks that every expected
+# file was written by this run, and uploads only that directory. Only the small result files
+# are committed to the repo, unedited, citing this run's id.
 on:
   workflow_dispatch:
 permissions:
   contents: read
+defaults:
+  run:
+    # explicit bash = `bash --noprofile --norc -eo pipefail {0}`: a failing command piped
+    # into `tail` fails the step instead of being masked by tail's exit status
+    shell: bash
 jobs:
   bench:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
       GAUNTLET_DATA_DIR: ${{ github.workspace }}/data
+      OUT: ${{ github.workspace }}/fresh-results
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -24,21 +32,58 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python scripts/download_data.py --only attack,sigma,art,mordor,mordor-compound,splunk 2>&1 | tail -20
+          python scripts/download_data.py --only attack,sigma,art,mordor,mordor-compound,splunk,published 2>&1 | tail -20
           git clone --quiet --depth 1 --branch r2026-07-01 https://github.com/SigmaHQ/sigma "$GAUNTLET_DATA_DIR/sigma-full"
       - name: checksums for files without a committed digest
         run: |
+          test ! -e "$OUT"
+          mkdir -p "$OUT"
           cp scripts/checksums.sha256 /tmp/before.sha256
-          python scripts/download_data.py --only attack,sigma,art,mordor,mordor-compound --write-checksums | tail -2
-          mkdir -p results && cp scripts/checksums.sha256 results/checksums-ci.sha256
-          diff /tmp/before.sha256 scripts/checksums.sha256 || true
+          python scripts/download_data.py --only attack,sigma,art,mordor,mordor-compound,published --write-checksums | tail -2
+          cp scripts/checksums.sha256 "$OUT/checksums-ci.sha256"
+          diff /tmp/before.sha256 scripts/checksums.sha256 || echo "::notice::checksum manifest differs (new files recorded)"
       - name: bench (cold, no cache)
-        run: python -m gauntlet bench --no-cache --out results 2>&1 | tail -40
+        run: python -m gauntlet bench --no-cache --out "$OUT" 2>&1 | tail -40
       - name: extended (cross-dataset, claimed vs measured)
-        run: python -m gauntlet extended --no-cache --full-rules "$GAUNTLET_DATA_DIR/sigma-full" --out results 2>&1 | tail -20
-      - run: cat results/EXTENDED.md >> "$GITHUB_STEP_SUMMARY"
+        run: python -m gauntlet extended --no-cache --full-rules "$GAUNTLET_DATA_DIR/sigma-full" --out "$OUT" 2>&1 | tail -20
+      - name: evaluator self-test on SigmaHQ regression samples
+        run: python -m gauntlet selftest --sigma-checkout "$GAUNTLET_DATA_DIR/sigma-full" --out "$OUT"
+      - name: published comparison (live input = the committed live.json, cited by its run id)
+        run: python -m gauntlet compare --results "$OUT" --live results/live.json
+      - name: README replay example and ransomware Navigator layer
+        run: |
+          python -m gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
+            --navigator "$OUT/navigator-ransomware-top15.json" --json "$OUT/replay-ransomware-top15.json" \
+            | sed "s#$OUT/##" | tee "$OUT/replay-ransomware-top15.txt"
+      - name: assert every expected file was written by this run
+        run: |
+          python - <<'EOF'
+          import json, os, pathlib
+          out, rid = pathlib.Path(os.environ["OUT"]), os.environ["GITHUB_RUN_ID"]
+          need = ["results.json", "RESULTS.md", "extended.json", "EXTENDED.md", "selftest.json", "SELFTEST.md",
+                  "published.json", "PUBLISHED.md", "claimed_vs_measured.png", "tactic_coverage.png",
+                  "prioritization_ransomware.png", "navigator-ransomware-top15.json", "replay-ransomware-top15.txt"]
+          need += [f"{k}-{r}.json" for k in ("coverage", "navigator") for r in ("legacy", "sigma-core", "sigma-all")]
+          missing = [n for n in need if not (out / n).is_file() or (out / n).stat().st_size == 0]
+          assert not missing, missing
+          r = json.loads((out / "results.json").read_text())
+          assert r["recordings"] == 98, (r["recordings"], r["skipped_recordings"])
+          for n in ("results.json", "extended.json", "selftest.json", "published.json"):
+              assert json.loads((out / n).read_text())["run_id"] == rid, n
+          for n in ("RESULTS.md", "EXTENDED.md", "SELFTEST.md", "PUBLISHED.md"):
+              assert f"run [{rid}]" in (out / n).read_text(), n
+          s = json.loads((out / "selftest.json").read_text())
+          assert s["tested"] >= 150, s["status"]
+          print("ok:", len(need), "files from run", rid)
+          EOF
+      - name: fresh vs committed results (informational; differs when the generator or data changed)
+        run: |
+          python scripts/verify_results.py results "$OUT" --summary "$GITHUB_STEP_SUMMARY" \
+            || echo "::notice::fresh results differ from the committed ones; see the step summary"
+      - run: cat "$OUT/EXTENDED.md" "$OUT/SELFTEST.md" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: results
-          path: results/
+          path: fresh-results/
+          if-no-files-found: error
           retention-days: 90
