@@ -12,4 +12,9 @@ Rules for contributions and any future emulation backend:
 Report issues privately via GitHub private vulnerability reporting ("Report a vulnerability" on the Security tab of this repository). Do not open a public issue. Please include reproduction steps. You should get an acknowledgement within 7 days.
 
 ## Supported versions
-Only the latest `main` is supported.
+| Version | Supported |
+|---|---|
+| 1.1.x (latest release: wheel, sdist and `ghcr.io/rakshit-737/gauntlet:1.1.0`) and `main` | yes |
+| 1.0.x and older | no (the 1.0.0 wheel and image report 0% in `sim`; upgrade) |
+
+GAUNTLET is not published on PyPI; install from a release tag or a release wheel.

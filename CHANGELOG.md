@@ -19,12 +19,7 @@ All notable changes to this project are documented here. Format follows
 - `benchmark` workflow: cold, clean-Linux run that produces the committed `results/`.
 - CLI `--version`, help text with defaults, `bench --no-cache`.
 - Repo: dependabot, CODEOWNERS, issue/PR templates, CITATION.cff, pip-audit and gitleaks in CI,
-  wheel/sdist/container smoke tests, Python 3.10-3.14 matrix.
-
-### Fixed
-- Packaging: legacy rules ship as package data, data/results default to the working directory (the v1.0.0 wheel and image reported 0% in `sim`); distribution renamed to `gauntlet-coverage`, Python 3.11+.
-- CLI creates parent directories for `--out`/`--json`/`--navigator`.
-- Docs: hero wording (two providers), exact p-value, corrected Wilson bounds; install pinned to v1.1.0.
+  wheel/sdist/container smoke tests, Python 3.11-3.14 test matrix.
 
 ### Changed
 - Published results now come from a clean Linux runner: 98 OTRF recordings / 55 techniques (was
@@ -38,12 +33,18 @@ All notable changes to this project are documented here. Format follows
 - Replay cache keyed by a fingerprint of rules and evaluator code.
 
 ### Fixed
-- Installed wheel and container loaded 0 legacy rules and reported 0% (rules now package data;
-  data/results default to the working directory; empty rule dirs raise).
+- Packaging: legacy rules ship as package data and data/results default to the working directory
+  (the v1.0.0 wheel and image loaded 0 legacy rules and reported 0% in `sim`); empty rule dirs
+  raise; distribution renamed to `gauntlet-coverage`, Python 3.11+.
+- CLI creates parent directories for `--out`/`--json`/`--navigator`.
 - Release notes are taken from this file (the awk pattern never matched).
 - Downloader: verify before install, discard mismatches, refuse paths outside the data dir,
-  remember AV-quarantined files, pin ATT&CK to a commit, no token on redirects.
+  record files local AV makes unreadable after download (a file blocked while still a `.part`
+  was not handled until the next release), pin ATT&CK to a commit, no token on redirects.
 - Parser ReDoS / argc-driven allocation on malformed input.
+- Docs: hero wording (two providers), exact p-value, install pinned to v1.1.0. Three Wilson
+  bounds were corrected by hand in the README; the generator still rounded twice and three other
+  bounds stayed 0.1 point off (fixed in the next release).
 
 ## [1.0.0] - 2026-09-26
 

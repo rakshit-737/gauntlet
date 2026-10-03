@@ -88,7 +88,9 @@ function curve(){
   try {
     summary = await getJSON("data/results.json");
     $("sub").textContent = `Static view of the committed benchmark: ${summary.recordings} OTRF Security-Datasets recordings ` +
-      `(${summary.recorded_techniques} ATT&CK techniques) replayed through three rule sets. Nothing is executed; the page only reads results/*.json.`;
+      `(${summary.recorded_techniques} ATT&CK techniques) replayed through three rule sets` +
+      (summary.run_id ? ` (benchmark run ${summary.run_id})` : "") +
+      `. Brackets are 95% Wilson intervals. Nothing is executed; the page only reads results/*.json.`;
     $("prof").innerHTML = Object.keys(summary.prioritization).map(p=>`<option>${esc(p)}</option>`).join("");
     $("rs").onchange = render; $("q").oninput = render; $("prof").onchange = curve;
     await render(); curve();
