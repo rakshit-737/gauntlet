@@ -1,15 +1,17 @@
 {
+ "run_id": "37094883465",
+ "commit": "d501d40bcb11e5cbd321d7f07c152d38326ae3f7",
  "ctid": {
   "techniques_compared": 53,
   "ctid_claimed": 50,
   "measured": 42,
   "claimed_ci95": [
-   0.8463,
-   0.9806
+   0.8462979158652877,
+   0.9805633386664043
   ],
   "measured_ci95": [
-   0.6654,
-   0.88
+   0.6654225518770907,
+   0.879954020260834
   ],
   "claimed_not_measured": [
    "T1012",
@@ -255,5 +257,9 @@
     "gauntlet_splunk_replay": false
    }
   ]
+ },
+ "inputs": {
+  "live_run_id": "37092465944",
+  "extended_run_id": "37094883465"
  }
 }

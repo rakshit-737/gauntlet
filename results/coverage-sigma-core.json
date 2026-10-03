@@ -2,9 +2,9 @@
  "ruleset": "sigma-core",
  "rules": 1365,
  "datasets": 98,
- "dataset_recall": 0.5204,
+ "dataset_recall": 0.5204081632653061,
  "datasets_any_alert": 71,
- "technique_coverage": 0.6545,
+ "technique_coverage": 0.6545454545454545,
  "techniques": 55,
  "events": 757090,
  "off_target_rules_per_dataset": 1.52,
@@ -666,8 +666,8 @@
    "rules": []
   }
  ],
- "exact_id_technique_coverage": 0.5636,
- "seconds": 50.2,
+ "exact_id_technique_coverage": 0.5636363636363636,
+ "seconds": 26.2,
  "fully_detected_coverage": 0.4,
  "outcomes": {
   "detected": 22,
@@ -676,30 +676,35 @@
  },
  "ci95": {
   "technique_coverage": [
-   0.5225,
-   0.7664
+   0.522539034021799,
+   0.7663729053353641
   ],
   "fully_detected_coverage": [
-   0.2812,
-   0.5319
+   0.28118497149424526,
+   0.5318720089217082
   ],
   "exact_id_technique_coverage": [
-   0.4327,
-   0.6863
+   0.4326981624671141,
+   0.6862655772681886
   ],
   "dataset_recall": [
-   0.4226,
-   0.6167
+   0.4226080622599415,
+   0.6166686728137607
   ]
  },
  "leakage_controlled": {
   "rules_removed": 25,
-  "technique_coverage": 0.5818,
+  "technique_coverage": 0.5818181818181818,
   "technique_coverage_ci95": [
-   0.4503,
-   0.7026
+   0.4503310363418142,
+   0.7026223433178602
   ],
-  "dataset_recall": 0.449,
+  "techniques_lost": 4,
+  "drop_ci95": [
+   0.028644060033978777,
+   0.17259940174327598
+  ],
+  "dataset_recall": 0.4489795918367347,
   "narrow_pattern_rules_removed": 19,
   "narrow_pattern_technique_coverage": 0.6
  }

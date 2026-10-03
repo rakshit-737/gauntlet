@@ -1,0 +1,238 @@
+{
+  "ruleset": "sigma-core",
+  "rules": 1365,
+  "datasets": 33,
+  "dataset_recall": 0.45454545454545453,
+  "datasets_any_alert": 22,
+  "technique_coverage": 0.5555555555555556,
+  "techniques": 18,
+  "events": 213161,
+  "off_target_rules_per_dataset": 1.55,
+  "off_target_alerts_per_10k_events": 7.88,
+  "by_tactic": {
+    "credential-access": {
+      "covered": 2,
+      "total": 4
+    },
+    "discovery": {
+      "covered": 0,
+      "total": 4
+    },
+    "execution": {
+      "covered": 3,
+      "total": 4
+    },
+    "lateral-movement": {
+      "covered": 2,
+      "total": 2
+    },
+    "persistence": {
+      "covered": 2,
+      "total": 3
+    },
+    "privilege-escalation": {
+      "covered": 1,
+      "total": 1
+    }
+  },
+  "results": [
+    {
+      "technique": "T1003",
+      "name": "OS Credential Dumping",
+      "tactic": "credential-access",
+      "outcome": "detected",
+      "datasets": 1,
+      "detected": 1,
+      "rules": [
+        "DPAPI Domain Backup Key Extraction"
+      ]
+    },
+    {
+      "technique": "T1003.001",
+      "name": "OS Credential Dumping: LSASS Memory",
+      "tactic": "credential-access",
+      "outcome": "partial",
+      "datasets": 5,
+      "detected": 4,
+      "rules": [
+        "HackTool - Dumpert Process Dumper Default File",
+        "Hacktool Execution - Imphash",
+        "LSASS Dump Keyword In CommandLine",
+        "LSASS Memory Access by Tool With Dump Keyword In Name",
+        "LSASS Process Memory Dump Creation Via Taskmgr.EXE",
+        "LSASS Process Memory Dump Files",
+        "Lsass Memory Dump via Comsvcs DLL",
+        "Password Dumper Activity on LSASS",
+        "Process Memory Dump Via Comsvcs.DLL"
+      ]
+    },
+    {
+      "technique": "T1012",
+      "name": "Query Registry",
+      "tactic": "discovery",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1021",
+      "name": "Remote Services",
+      "tactic": "lateral-movement",
+      "outcome": "detected",
+      "datasets": 1,
+      "detected": 1,
+      "rules": [
+        "CobaltStrike Service Installations - Security",
+        "Potential CobaltStrike Service Installations - Registry"
+      ]
+    },
+    {
+      "technique": "T1021.006",
+      "name": "Remote Services: Windows Remote Management",
+      "tactic": "lateral-movement",
+      "outcome": "detected",
+      "datasets": 1,
+      "detected": 1,
+      "rules": [
+        "Potential Remote PowerShell Session Initiated"
+      ]
+    },
+    {
+      "technique": "T1047",
+      "name": "Windows Management Instrumentation",
+      "tactic": "execution",
+      "outcome": "partial",
+      "datasets": 6,
+      "detected": 1,
+      "rules": [
+        "T1047 Wmiprvse Wbemcomn DLL Hijack",
+        "Wmiprvse Wbemcomn DLL Hijack",
+        "Wmiprvse Wbemcomn DLL Hijack - File"
+      ]
+    },
+    {
+      "technique": "T1053.005",
+      "name": "Scheduled Task/Job: Scheduled Task",
+      "tactic": "execution",
+      "outcome": "partial",
+      "datasets": 4,
+      "detected": 3,
+      "rules": [
+        "Schtasks Creation Or Modification With SYSTEM Privileges",
+        "Suspicious Command Patterns In Scheduled Task Creation"
+      ]
+    },
+    {
+      "technique": "T1055",
+      "name": "Process Injection",
+      "tactic": "privilege-escalation",
+      "outcome": "partial",
+      "datasets": 3,
+      "detected": 1,
+      "rules": [
+        "Mavinject Inject DLL Into Running Process",
+        "Renamed Mavinject.EXE Execution"
+      ]
+    },
+    {
+      "technique": "T1059",
+      "name": "Command and Scripting Interpreter",
+      "tactic": "execution",
+      "outcome": "partial",
+      "datasets": 2,
+      "detected": 1,
+      "rules": [
+        "PCRE.NET Package Image Load",
+        "PCRE.NET Package Temp Files"
+      ]
+    },
+    {
+      "technique": "T1059.001",
+      "name": "Command and Scripting Interpreter: PowerShell",
+      "tactic": "execution",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1087.002",
+      "name": "Account Discovery: Domain Account",
+      "tactic": "discovery",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1110.003",
+      "name": "Brute Force: Password Spraying",
+      "tactic": "credential-access",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1112",
+      "name": "Modify Registry",
+      "tactic": "persistence",
+      "outcome": "partial",
+      "datasets": 3,
+      "detected": 1,
+      "rules": [
+        "NetNTLM Downgrade Attack",
+        "NetNTLM Downgrade Attack - Registry"
+      ]
+    },
+    {
+      "technique": "T1135",
+      "name": "Network Share Discovery",
+      "tactic": "discovery",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1518",
+      "name": "Software Discovery",
+      "tactic": "discovery",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1543.003",
+      "name": "Create or Modify System Process: Windows Service",
+      "tactic": "persistence",
+      "outcome": "detected",
+      "datasets": 1,
+      "detected": 1,
+      "rules": [
+        "Suspicious Service Path Modification"
+      ]
+    },
+    {
+      "technique": "T1547.001",
+      "name": "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder",
+      "tactic": "persistence",
+      "outcome": "missed",
+      "datasets": 2,
+      "detected": 0,
+      "rules": []
+    },
+    {
+      "technique": "T1558.003",
+      "name": "Steal or Forge Kerberos Tickets: Kerberoasting",
+      "tactic": "credential-access",
+      "outcome": "missed",
+      "datasets": 1,
+      "detected": 0,
+      "rules": []
+    }
+  ],
+  "profile": "ransomware"
+}

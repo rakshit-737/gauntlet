@@ -1,0 +1,21 @@
+Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 groups) through sigma-core ...
+
+    technique    prio  tactic                result   detections
+[~] T1059       0.944  execution             partial  PCRE.NET Package Image Load; PCRE.NET Package Temp Files
+[-] T1059.001   0.556  execution             missed   -
+[+] T1003       0.549  credential-access     detected DPAPI Domain Backup Key Extraction
+[+] T1021       0.535  lateral-movement      detected CobaltStrike Service Installations - Security; Potential CobaltStrike Service Installations - Registry
+[-] T1547.001   0.494  persistence           missed   -
+[~] T1112       0.481  persistence           partial  NetNTLM Downgrade Attack; NetNTLM Downgrade Attack - Registry
+[+] T1543.003   0.473  persistence           detected Suspicious Service Path Modification
+[~] T1047       0.432  execution             partial  T1047 Wmiprvse Wbemcomn DLL Hijack; Wmiprvse Wbemcomn DLL Hijack
+[~] T1055       0.428  privilege-escalation  partial  Mavinject Inject DLL Into Running Process; Renamed Mavinject.EXE Execution
+[~] T1003.001   0.418  credential-access     partial  HackTool - Dumpert Process Dumper Default File; Hacktool Execution - Imphash
+[-] T1135       0.403  discovery             missed   -
+[-] T1518       0.403  discovery             missed   -
+[~] T1053.005   0.383  execution             partial  Schtasks Creation Or Modification With SYSTEM Privileges; Suspicious Command Patterns In Scheduled Task Creation
+[-] T1087.002   0.365  discovery             missed   -
+[-] T1012       0.336  discovery             missed   -
+
+Technique coverage: 56%  threat-weighted: 61%  off-target rules/recording: 1.5
+ATT&CK Navigator layer -> navigator-ransomware-top15.json

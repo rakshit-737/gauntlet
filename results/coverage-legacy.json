@@ -2,9 +2,9 @@
  "ruleset": "legacy",
  "rules": 6,
  "datasets": 98,
- "dataset_recall": 0.0306,
+ "dataset_recall": 0.030612244897959183,
  "datasets_any_alert": 14,
- "technique_coverage": 0.0545,
+ "technique_coverage": 0.05454545454545454,
  "techniques": 55,
  "events": 757090,
  "off_target_rules_per_dataset": 0.14,
@@ -550,9 +550,9 @@
    "rules": []
   }
  ],
- "exact_id_technique_coverage": 0.0364,
- "seconds": 14.8,
- "fully_detected_coverage": 0.0182,
+ "exact_id_technique_coverage": 0.03636363636363636,
+ "seconds": 7.2,
+ "fully_detected_coverage": 0.01818181818181818,
  "outcomes": {
   "detected": 1,
   "partial": 2,
@@ -560,20 +560,20 @@
  },
  "ci95": {
   "technique_coverage": [
-   0.0187,
-   0.1485
+   0.018723215408912114,
+   0.1485306064439705
   ],
   "fully_detected_coverage": [
-   0.0032,
-   0.0961
+   0.0032167804192709745,
+   0.0960577615848674
   ],
   "exact_id_technique_coverage": [
-   0.01,
-   0.1232
+   0.010029541199001908,
+   0.1232346407295086
   ],
   "dataset_recall": [
-   0.0105,
-   0.0862
+   0.010464891001098077,
+   0.08617020230375108
   ]
  }
 }

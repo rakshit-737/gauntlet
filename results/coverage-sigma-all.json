@@ -2,7 +2,7 @@
  "ruleset": "sigma-all",
  "rules": 2519,
  "datasets": 98,
- "dataset_recall": 0.6837,
+ "dataset_recall": 0.6836734693877551,
  "datasets_any_alert": 88,
  "technique_coverage": 0.8,
  "techniques": 55,
@@ -721,9 +721,9 @@
    ]
   }
  ],
- "exact_id_technique_coverage": 0.6545,
- "seconds": 67.9,
- "fully_detected_coverage": 0.5818,
+ "exact_id_technique_coverage": 0.6545454545454545,
+ "seconds": 35.9,
+ "fully_detected_coverage": 0.5818181818181818,
  "outcomes": {
   "detected": 32,
   "partial": 12,
@@ -731,31 +731,36 @@
  },
  "ci95": {
   "technique_coverage": [
-   0.6764,
-   0.8845
+   0.6763512073441295,
+   0.884477851408011
   ],
   "fully_detected_coverage": [
-   0.4503,
-   0.7026
+   0.4503310363418142,
+   0.7026223433178602
   ],
   "exact_id_technique_coverage": [
-   0.5225,
-   0.7664
+   0.522539034021799,
+   0.7663729053353641
   ],
   "dataset_recall": [
-   0.5862,
-   0.7673
+   0.5861612163661356,
+   0.7673293992971841
   ]
  },
  "leakage_controlled": {
   "rules_removed": 50,
-  "technique_coverage": 0.7636,
+  "technique_coverage": 0.7636363636363637,
   "technique_coverage_ci95": [
-   0.6365,
-   0.8563
+   0.636516337024307,
+   0.8563334418790891
   ],
-  "dataset_recall": 0.6122,
+  "techniques_lost": 2,
+  "drop_ci95": [
+   0.010029541199001908,
+   0.1232346407295086
+  ],
+  "dataset_recall": 0.6122448979591837,
   "narrow_pattern_rules_removed": 41,
-  "narrow_pattern_technique_coverage": 0.7636
+  "narrow_pattern_technique_coverage": 0.7636363636363637
  }
 }

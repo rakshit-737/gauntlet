@@ -1,0 +1,61 @@
+{
+ "run_id": "37094883465",
+ "commit": "d501d40bcb11e5cbd321d7f07c152d38326ae3f7",
+ "sigma_release": "r2026-07-01",
+ "samples": 197,
+ "status": {
+  "fired": 197
+ },
+ "tested": 197,
+ "fired": 197,
+ "recall": 1.0,
+ "recall_ci95": [
+  0.9808731777657199,
+  1.0
+ ],
+ "exact_match_count": 163,
+ "by_category": {
+  "windows/process_creation": {
+   "tested": 128,
+   "fired": 128
+  },
+  "windows/registry": {
+   "tested": 32,
+   "fired": 32
+  },
+  "windows/file": {
+   "tested": 18,
+   "fired": 18
+  },
+  "windows/image_load": {
+   "tested": 4,
+   "fired": 4
+  },
+  "2025/Malware": {
+   "tested": 4,
+   "fired": 4
+  },
+  "2026/Exploits": {
+   "tested": 4,
+   "fired": 4
+  },
+  "windows/builtin": {
+   "tested": 3,
+   "fired": 3
+  },
+  "windows/process_access": {
+   "tested": 2,
+   "fired": 2
+  },
+  "windows/sysmon": {
+   "tested": 1,
+   "fired": 1
+  },
+  "2025/Exploits": {
+   "tested": 1,
+   "fired": 1
+  }
+ },
+ "missed": [],
+ "untested": []
+}
