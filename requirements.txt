@@ -3,5 +3,5 @@ pyyaml>=6
 # Optional: figures in `gauntlet bench` (skipped gracefully if absent)
 matplotlib>=3.8
 # Dev/test
-pytest>=7
+pytest>=9.1.1
 ruff==0.8.4
