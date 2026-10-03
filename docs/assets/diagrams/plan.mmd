@@ -1,0 +1,7 @@
+flowchart TB
+  STIX[("ATT&CK v19.2")] --> AT["attack.py"]
+  TP["threat profile"] --> PR["prioritize.py"]
+  AT --> PR
+  AT --> PRED["predict.py"]
+  PR --> PLAN["atomics.py<br/>dry-run plan"]
+  PR --> SEL["recordings to replay"]

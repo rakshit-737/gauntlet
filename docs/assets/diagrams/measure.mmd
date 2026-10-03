@@ -1,0 +1,8 @@
+flowchart TB
+  REC[("recordings")] --> FMT["formats.py"]
+  LIVE[("live auditd")] --> FMT
+  SIG[("SigmaHQ rules")] --> SE["sigma.py"]
+  FMT --> RP["replay.py"]
+  SE --> RP
+  RP --> COV["coverage.py"]
+  COV --> OUT["reports, Navigator,<br/>regression gate"]
