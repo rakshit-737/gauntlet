@@ -25,7 +25,7 @@
 - [x] Technique co-occurrence prediction
 - [x] 95% CIs for every reported statistic: Wilson for proportions, bootstrap for weighted coverage and paired strategy differences, exact sign and McNemar tests where comparisons are not nested
 - [x] Evaluator self-test on SigmaHQ regression samples
-- [x] Docs site, static coverage explorer, container image and tagged releases (v1.0.0, v1.1.0)
+- [x] Docs site, static coverage explorer, container image and tagged releases (v1.0.0, v1.1.0, v1.1.1)
 - [ ] Run the ART manifest in the isolated Docker/VM range and replay its Sysmon logs (the loader already accepts JSON-lines events). Needs a Windows lab VM with Sysmon; executing atomics on this workstation is out of scope by design (ADR 0004)
 - [x] OTRF compound campaigns and Splunk attack_data as additional sources; claimed-vs-measured analysis; held-out rule selection
 - [x] Live auditd telemetry with event-level labels in CI (benign allowlist, ADR 0005)

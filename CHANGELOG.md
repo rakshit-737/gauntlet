@@ -5,6 +5,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-03
+
 ### Added
 - `gauntlet selftest`: evaluator fidelity control. Every SigmaHQ positive regression sample is
   replayed through the rule it was recorded for: 197 of 197 fire (95% Wilson [98.1, 100.0]).

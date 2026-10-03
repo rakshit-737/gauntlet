@@ -21,12 +21,12 @@ It also ranks techniques by what real ATT&CK groups do, turns gaps into the chea
 
 ```bash
 python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.0"
+pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.1"
 gauntlet plan --profile ransomware --top 10          # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5 # likely next techniques
 ```
 
-GAUNTLET is **not published on PyPI**: install from the v1.1.0 tag (above) or the wheel attached to the [v1.1.0 release](https://github.com/rakshit-737/gauntlet/releases/tag/v1.1.0). The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`. This distribution is named `gauntlet-coverage`; the import package and command stay `gauntlet`.
+GAUNTLET is **not published on PyPI**: install from the v1.1.1 tag (above) or the wheel attached to the [v1.1.1 release](https://github.com/rakshit-737/gauntlet/releases/tag/v1.1.1). The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`. This distribution is named `gauntlet-coverage`; the import package and command stay `gauntlet`.
 
 > Lab-only. The `gauntlet` package **never executes attack techniques**: it reads recorded logs and prints
 > Atomic Red Team test names marked DRY RUN. One CI job runs an allowlist of benign, read-only discovery
@@ -232,7 +232,7 @@ More detail: [docs/limitations.md](docs/limitations.md).
 
 - [x] Real CTI prevalence and profiles; Sigma scoring on real telemetry; Navigator export, cheapest wins, telemetry ablation
 - [x] CTI vs breadth-first (leave-one-group-out); co-occurrence prediction; an interval or exact test for every reported statistic
-- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0, v1.1.0)
+- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0, v1.1.0, v1.1.1)
 - [x] OTRF compound and Splunk attack_data sources; claimed vs measured; held-out rule selection
 - [x] Live auditd telemetry with event-level labels (benign allowlist, ADR 0005); published-number comparison
 - [x] Evaluator self-test on SigmaHQ regression samples

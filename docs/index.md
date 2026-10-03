@@ -36,12 +36,12 @@ It also ranks techniques by what real ATT&CK groups do (CTI prioritization), tur
 
 ```bash
 python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.0"
+pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.1"
 gauntlet plan --profile ransomware --top 10       # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5
 ```
 
-GAUNTLET is not published on PyPI: install from the v1.1.0 tag or the release wheel. The name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Use v1.1.0 or later; the v1.0.0 wheel and image predate the rules-path and bench-output fixes.
+GAUNTLET is not published on PyPI: install from the v1.1.1 tag or the release wheel. The name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Use v1.1.0 or later; the v1.0.0 wheel and image predate the rules-path and bench-output fixes.
 
 <div class="grid cards" markdown>
 
