@@ -59,6 +59,14 @@ jobs:
           /tmp/v/bin/gauntlet --help
           /tmp/v/bin/gauntlet sim --profile ransomware --json r.json
           python -c "import json,sys; c=json.load(open('r.json'))['coverage']; print('coverage', c); sys.exit(c <= 0)"
+      - name: wheel replay smoke test (installed package, not the checkout)
+        run: |
+          cp -r tests /tmp/t
+          cd /tmp
+          /tmp/v/bin/pip install pytest
+          # the tests must import the wheel from site-packages, with its packaged rules and replay CLI
+          /tmp/v/bin/python -c "import gauntlet, sys; f = gauntlet.__file__; print(f); sys.exit('site-packages' not in f)"
+          /tmp/v/bin/python -m pytest -q -p no:cacheprovider --rootdir /tmp/t /tmp/t/test_pipeline.py -k replay
       - name: sdist tests run
         run: |
           mkdir /tmp/s && tar -xzf dist/*.tar.gz -C /tmp/s

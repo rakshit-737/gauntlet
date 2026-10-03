@@ -11,6 +11,9 @@ on:
     - cron: "17 4 * * 1"
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash  # -eo pipefail
 jobs:
   live:
     runs-on: ubuntu-24.04
@@ -67,6 +70,9 @@ jobs:
               assert s["labelled_events"] > 0, name
               assert all(c["labelled_events"] > 0 for c in s["commands"]), [c["command"] for c in s["commands"] if not c["labelled_events"]]
               assert {"T1033", "T1082", "T1057", "T1053.003"} <= set(s["techniques"]), s["techniques"]
+          import os
+          assert r["run_id"] == os.environ["GITHUB_RUN_ID"], r["run_id"]
+          assert r["replayed_recordings"] and r["replay_completeness"], "no Splunk Linux replay profile"
           print("ok")
           EOF
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -74,4 +80,4 @@ jobs:
         with:
           name: live-telemetry
           path: live-out/
-          retention-days: 30
+          retention-days: 90
