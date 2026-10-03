@@ -96,7 +96,8 @@ def claimed_vs_measured(results: Sequence[replay.ReplayResult], rules: dict[str,
             "overstatement_ci95": list(stats.wilson(b, n)),
             "discordant_claimed_only": b, "discordant_measured_only": cc,
             "exact_id": {"claimed": ec, "measured": em, "claimed_only": eb,
-                         "claimed_rate": ec / n if n else 0.0, "measured_rate": em / n if n else 0.0,
+                         "claimed_rate": ec / n if n else 0.0, "claimed_ci95": list(stats.wilson(ec, n)),
+                         "measured_rate": em / n if n else 0.0,
                          "measured_ci95": list(stats.wilson(em, n)),
                          "overstatement_points": 100 * eb / n if n else 0.0,
                          "overstatement_ci95": list(stats.wilson(eb, n))},
@@ -196,6 +197,9 @@ def held_out_selection(train: tuple[list[replay.ReplayResult], dict[str, SigmaRu
         s = coverage.score("sel", te_res, {i: rules[i] for i in ids if i in rules}, kb)
         return s.technique_coverage, s.weighted(rel)
 
+    def test_weighted_ci(ids: set[str]) -> list[float]:
+        return list(coverage.score("sel", te_res, {i: rules[i] for i in ids if i in rules}, kb).weighted_ci(rel))
+
     pool = sorted({r for res in tr_res for r in res.fired() if r in rules and coverage.on_target(
         rules[r].techniques, res.techniques)})
     out: dict[str, Any] = {"k": k, "train": "otrf", "test": "splunk-windows", "candidate_rules": len(pool)}
@@ -207,7 +211,7 @@ def held_out_selection(train: tuple[list[replay.ReplayResult], dict[str, SigmaRu
         hit = round(c * n_test)
         out[name] = {"test_technique_coverage": c, "test_techniques_covered": hit,
                      "test_technique_coverage_ci95": list(stats.wilson(hit, n_test)),
-                     "test_ransomware_weighted": cw}
+                     "test_ransomware_weighted": cw, "test_ransomware_weighted_ci95": test_weighted_ci(sel)}
     rnd = random.Random(0)
     draws = [test_cov(set(rnd.sample(pool, min(k, len(pool))))) for _ in range(seeds)]
     cs, ws = sorted(d[0] for d in draws), sorted(d[1] for d in draws)
@@ -291,13 +295,15 @@ def render_md(r: dict[str, Any]) -> str:
         if not e.get("rulesets"):
             L.append(f"| {src} | - | 0 | - | - | - | - | - | - | - |")
     L += ["", "Exact-ID variant (a rule tagged with exactly the recorded ID, not just its family):", "",
-          "| Source | Rule set | Claimed (exact ID) | Measured (exact ID) [95% CI] | Overstatement, pts [95% CI] |",
+          "| Source | Rule set | Claimed (exact ID) [95% CI] | Measured (exact ID) [95% CI] "
+          "| Overstatement, pts [95% CI] |",
           "|---|---|---:|---:|---:|"]
     for src, e in r["sources"].items():
         for name, d in (e.get("rulesets") or {}).items():
             x = d["claimed_vs_measured"].get("exact_id")
             if x:
-                L.append(f"| {src} | {name} | {_pct(x['claimed_rate'])} | {_pct(x['measured_rate'])}"
+                L.append(f"| {src} | {name} | {_pct(x['claimed_rate'])}{_ci(x.get('claimed_ci95'))} "
+                         f"| {_pct(x['measured_rate'])}"
                          f"{_ci(x['measured_ci95'])} | {stats.pct(x['overstatement_points'] / 100)}"
                          f"{_ci(x['overstatement_ci95'])} |")
     up = [(src, name, d["unparsed_channel"]) for src, e in r["sources"].items()
@@ -327,14 +333,15 @@ def render_md(r: dict[str, Any]) -> str:
             return (f"{_pct(x['test_technique_coverage'])} ({x['test_techniques_covered']} of {nt}, 95% Wilson"
                     f"{_ci(x['test_technique_coverage_ci95'])})")
         L += ["", f"## Held-out rule selection: pick {h['k']} rules on OTRF, test on Splunk Windows", "",
-              "The last column is the share of random draws whose test ransomware-weighted coverage is at or "
-              "above the selection's (a one-sided permutation p-value).", "",
+              "Weighted coverage brackets are 95% percentile bootstrap intervals over test techniques. The last "
+              "column is the share of random draws whose test ransomware-weighted coverage is at or above the "
+              "selection's (a one-sided permutation p-value).", "",
               "| Selection on OTRF | Test technique coverage | Test ransomware-weighted coverage "
               "| Random draws at or above |", "|---|---:|---:|---:|",
-              f"| CTI-weighted greedy | {gcov(g)} | {_pct(g['test_ransomware_weighted'])} "
-              f"| {_pct(g['random_draws_at_or_above'])} |",
-              f"| Unweighted greedy | {gcov(u)} | {_pct(u['test_ransomware_weighted'])} "
-              f"| {_pct(u['random_draws_at_or_above'])} |",
+              f"| CTI-weighted greedy | {gcov(g)} | {_pct(g['test_ransomware_weighted'])}"
+              f"{_ci(g.get('test_ransomware_weighted_ci95'))} | {_pct(g['random_draws_at_or_above'])} |",
+              f"| Unweighted greedy | {gcov(u)} | {_pct(u['test_ransomware_weighted'])}"
+              f"{_ci(u.get('test_ransomware_weighted_ci95'))} | {_pct(u['random_draws_at_or_above'])} |",
               f"| Random {h['k']} of {h['candidate_rules']} OTRF-firing rules ({rn['draws']} draws, mean "
               f"[2.5-97.5 percentile of the draws]) | {_pct(rn['test_technique_coverage_mean'])} "
               f"[{_pct(rn['test_technique_coverage_95'][0])}, {_pct(rn['test_technique_coverage_95'][1])}] "
