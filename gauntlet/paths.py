@@ -1,4 +1,4 @@
-"""Where the downloaded datasets live (outside git)."""
+"""Where the downloaded datasets live (outside git), and which CI run produced a result."""
 from __future__ import annotations
 
 import os
@@ -35,3 +35,19 @@ def mordor_root(root: Path | None = None) -> Path:
 def have_real_data(root: Path | None = None) -> bool:
     r = root or data_dir()
     return sigma_zip(r).exists() and (r / "mordor" / "_metadata").is_dir()
+
+
+REPO_URL = "https://github.com/rakshit-737/gauntlet"
+
+
+def provenance() -> dict[str, str | None]:
+    """Workflow run id and commit (GitHub Actions env) that produced a result file; None locally."""
+    return {"run_id": os.environ.get("GITHUB_RUN_ID"), "commit": os.environ.get("GITHUB_SHA")}
+
+
+def provenance_line(r: dict) -> str:
+    """Markdown sentence naming the run and commit a result file came from."""
+    if r.get("run_id"):
+        c = f" at commit `{r['commit'][:7]}`" if r.get("commit") else ""
+        return f"Source: GitHub Actions run [{r['run_id']}]({REPO_URL}/actions/runs/{r['run_id']}){c}."
+    return "Source: local run (no GitHub Actions run id)."

@@ -17,15 +17,19 @@ For every recorded technique the analysis compares
 * **measured** coverage -- at least one such rule actually fired on-target on a
   recording of the technique.
 
-Claimed-but-not-measured techniques are classified from data the replay
-already records:
+Claimed-but-not-measured techniques are classified from the per-recording
+(channel, EventID) event counts the replay records:
 
 * ``telemetry_gap`` -- no tagged rule's target (channel, EventID) occurs in any
   recording of the technique: the rule could not have fired on this data;
-* ``rule_logic_gap`` -- the target telemetry is present but no tagged rule matched.
+* ``rule_logic_gap`` -- events of a tagged rule's target (channel, EventID) are in a
+  recording of the technique, but no tagged rule matched them.
 
-The paired difference is tested with an exact McNemar test (claimed is never
-lower than measured, so all discordant pairs point one way).
+Measured coverage is nested in claimed coverage by construction (a measured
+technique needs a rule tagged with it), so every discordant technique points the
+same way and a McNemar test would only restate their number. The overstatement is
+therefore reported as claimed-only techniques / techniques, in points, with a
+95% Wilson interval.
 """
 from __future__ import annotations
 
@@ -51,39 +55,52 @@ def claimed_vs_measured(results: Sequence[replay.ReplayResult], rules: dict[str,
     canon = (lambda ids: tuple(sorted({kb.canonical(t) for t in ids}))) if kb else tuple
     summ = coverage.score("x", results, rules, kb)
     measured = {t.technique: t.detected > 0 for t in summ.techniques}
-    rfam = {rid: {parent(t) for t in canon(r.techniques)} for rid, r in rules.items()}
-    # channels/EventIDs seen per technique: ReplayResult.channels is per channel only, so the
-    # (channel, None) wildcard and channel membership are what we can check without re-replaying
-    chans: dict[str, set[str]] = {}
+    exact_measured = {t.technique: t.detected > 0
+                      for t in coverage.score("x", results, rules, kb, exact=True).techniques}
+    rtech = {rid: set(canon(r.techniques)) for rid, r in rules.items()}
+    rfam = {rid: {parent(t) for t in ts} for rid, ts in rtech.items()}
+    recs: dict[str, list[replay.ReplayResult]] = {}
     for res in results:
         for t in canon(res.techniques):
-            chans.setdefault(t, set()).update(res.channels)
+            recs.setdefault(t, []).append(res)
     rows = []
     for t in sorted(measured):
         tagged = [rid for rid, fam in rfam.items() if parent(t) in fam]
         claimed = bool(tagged)
         gap = None
         if claimed and not measured[t]:
-            seen = chans.get(t, set())
-            reachable = any(c in seen for rid in tagged for c, _ in rules[rid].targets)
+            # reachable = a recording of t has events of a tagged rule's (channel, EventID) target
+            reachable = any(res.has_target(ch, eid) for rid in tagged for ch, eid in rules[rid].targets
+                            for res in recs.get(t, []))
             gap = "rule_logic_gap" if reachable else "telemetry_gap"
         rows.append({"technique": t, "name": kb.name_of(t) if kb else t, "claimed": claimed,
-                     "tagged_rules": len(tagged), "measured": measured[t], "gap": gap})
+                     "tagged_rules": len(tagged), "measured": measured[t], "gap": gap,
+                     "exact_claimed": any(t in ts for ts in rtech.values()),
+                     "exact_measured": exact_measured.get(t, False)})
     n = len(rows)
     c = sum(r["claimed"] for r in rows)
     m = sum(r["measured"] for r in rows)
     b = sum(r["claimed"] and not r["measured"] for r in rows)
-    cc = sum(r["measured"] and not r["claimed"] for r in rows)
+    cc = sum(r["measured"] and not r["claimed"] for r in rows)  # 0 by construction
+    ec = sum(r["exact_claimed"] for r in rows)
+    em = sum(r["exact_measured"] for r in rows)
+    eb = sum(r["exact_claimed"] and not r["exact_measured"] for r in rows)
     gaps: dict[str, int] = {}
     for r in rows:
         if r["gap"]:
             gaps[r["gap"]] = gaps.get(r["gap"], 0) + 1
     return {"techniques": n,
-            "claimed": c, "claimed_rate": round(c / n, 4) if n else 0.0, "claimed_ci95": list(stats.wilson(c, n)),
-            "measured": m, "measured_rate": round(m / n, 4) if n else 0.0, "measured_ci95": list(stats.wilson(m, n)),
-            "overstatement_points": round(100 * (c - m) / n, 1) if n else 0.0,
+            "claimed": c, "claimed_rate": c / n if n else 0.0, "claimed_ci95": list(stats.wilson(c, n)),
+            "measured": m, "measured_rate": m / n if n else 0.0, "measured_ci95": list(stats.wilson(m, n)),
+            "overstatement_points": 100 * (c - m) / n if n else 0.0,
+            "overstatement_ci95": list(stats.wilson(b, n)),
             "discordant_claimed_only": b, "discordant_measured_only": cc,
-            "mcnemar_p": stats.mcnemar_exact(b, cc), "gap_classes": gaps, "rows": rows}
+            "exact_id": {"claimed": ec, "measured": em, "claimed_only": eb,
+                         "claimed_rate": ec / n if n else 0.0, "measured_rate": em / n if n else 0.0,
+                         "measured_ci95": list(stats.wilson(em, n)),
+                         "overstatement_points": 100 * eb / n if n else 0.0,
+                         "overstatement_ci95": list(stats.wilson(eb, n))},
+            "gap_classes": gaps, "rows": rows}
 
 
 def _sources(root: Path) -> dict[str, list[mordor.Dataset]]:
@@ -109,7 +126,7 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         specs["windows"]["sigma-full"] = f"sigma-all:{full_rules}"
         specs["linux"]["sigma-full"] = f"sigma-linux:{full_rules}"
     kept: dict[tuple[str, str], tuple[list[replay.ReplayResult], dict[str, SigmaRule]]] = {}
-    report: dict[str, Any] = {"sigma_release": paths.SIGMA_TAG, "attack_version": kb.version,
+    report: dict[str, Any] = {**paths.provenance(), "sigma_release": paths.SIGMA_TAG, "attack_version": kb.version,
                               "skipped_unavailable": {}, "sources": {}}
     for k, v in (("otrf", mordor.load_catalog(root)), ("otrf-compound", mordor.load_compound(root)),
                  ("splunk", mordor.load_splunk(root))):
@@ -132,10 +149,14 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
             d = {k: v for k, v in s.to_dict().items() if k not in ("by_tactic",)}
             d["ci95"] = {"technique_coverage": list(stats.wilson(n_cov, len(s.techniques))),
                          "dataset_recall": list(stats.wilson(s.datasets_detected, s.datasets))}
-            d["fully_detected_coverage"] = round(
-                sum(t.outcome == "detected" for t in s.techniques) / max(len(s.techniques), 1), 4)
+            d["fully_detected_coverage"] = (
+                sum(t.outcome == "detected" for t in s.techniques) / max(len(s.techniques), 1))
             d["claimed_vs_measured"] = claimed_vs_measured(res, rules, kb)
             d["record_types"] = _record_types(res)
+            # events whose channel could not be parsed can never match a rule (RuleIndex keys on channel)
+            d["unparsed_channel"] = {"events": sum(r.channels.get("", 0) for r in res),
+                                     "recordings": sum(r.channels.get("", 0) > 0 for r in res),
+                                     "events_total": sum(r.n_events for r in res)}
             entry["rulesets"][name] = d
             kept[(src, name)] = (res, rules)
         report["sources"][src] = entry
@@ -179,19 +200,19 @@ def held_out_selection(train: tuple[list[replay.ReplayResult], dict[str, SigmaRu
     for name, w in (("greedy_cti_weighted", rel), ("greedy_unweighted", None)):
         sel = {x["id"] for x in coverage.greedy_rule_selection(tr_res, rules, w, top=k, kb=kb)}
         c, cw = test_cov(sel)
-        out[name] = {"test_technique_coverage": round(c, 4), "test_ransomware_weighted": round(cw, 4)}
+        out[name] = {"test_technique_coverage": c, "test_ransomware_weighted": cw}
     rnd = random.Random(0)
     draws = [test_cov(set(rnd.sample(pool, min(k, len(pool))))) for _ in range(seeds)]
     cs, ws = sorted(d[0] for d in draws), sorted(d[1] for d in draws)
     q = lambda v, p: v[min(len(v) - 1, int(p * len(v)))]  # noqa: E731
-    out["random"] = {"test_technique_coverage_mean": round(sum(cs) / len(cs), 4),
-                     "test_technique_coverage_95": [round(q(cs, .025), 4), round(q(cs, .975), 4)],
-                     "test_ransomware_weighted_mean": round(sum(ws) / len(ws), 4),
-                     "test_ransomware_weighted_95": [round(q(ws, .025), 4), round(q(ws, .975), 4)],
+    out["random"] = {"test_technique_coverage_mean": sum(cs) / len(cs),
+                     "test_technique_coverage_95": [q(cs, .025), q(cs, .975)],
+                     "test_ransomware_weighted_mean": sum(ws) / len(ws),
+                     "test_ransomware_weighted_95": [q(ws, .025), q(ws, .975)],
                      "draws": seeds}
     for name in ("greedy_cti_weighted", "greedy_unweighted"):
         v = out[name]["test_ransomware_weighted"]
-        out[name]["random_draws_at_or_above"] = round(sum(x >= v for x in ws) / len(ws), 4)
+        out[name]["random_draws_at_or_above"] = sum(x >= v for x in ws) / len(ws)
     return out
 
 
@@ -215,23 +236,38 @@ def _agreement(report: dict[str, Any]) -> dict[str, Any]:
         return {}
     both = sorted(set(a) & set(b))
     agree = sum(a[t] == b[t] for t in both)
-    return {"shared_techniques": len(both), "agree": agree,
-            "otrf_only_detected": [t for t in both if a[t] and not b[t]],
-            "splunk_only_detected": [t for t in both if b[t] and not a[t]]}
+    oo = [t for t in both if a[t] and not b[t]]
+    so = [t for t in both if b[t] and not a[t]]
+    # not nested (different recordings of the same technique), so an exact McNemar test is meaningful
+    return {"shared_techniques": len(both), "agree": agree, "agree_ci95": list(stats.wilson(agree, len(both))),
+            "otrf_only_detected": oo, "splunk_only_detected": so,
+            "mcnemar_p": stats.mcnemar_exact(len(oo), len(so))}
 
 
 def _pct(x: float) -> str:
-    return f"{100 * x:.1f}%"
+    return f"{stats.pct(x)}%"
+
+
+def _ci(ci) -> str:
+    return stats.fmt_ci(ci)
 
 
 def render_md(r: dict[str, Any]) -> str:
     L = ["# Cross-dataset benchmark: claimed vs measured coverage", "",
-         f"Generated by `python -m gauntlet extended` (SigmaHQ {r['sigma_release']}, ATT&CK v{r['attack_version']}).",
+         f"Generated by `python -m gauntlet extended` (SigmaHQ {r['sigma_release']}, ATT&CK v{r['attack_version']}). "
+         + paths.provenance_line(r),
          "*Claimed* = at least one rule is tagged with the technique (family match); *measured* = such a rule "
          "fired on-target on a recording of it. Technique coverage counts partially detected techniques as "
-         "covered; *fully detected* requires every recording of the technique to be detected.", "",
+         "covered; *fully detected* requires every recording of the technique to be detected. Brackets are 95% "
+         "Wilson intervals computed from the raw counts and rounded once.", "",
+         "Measured is a subset of claimed by construction (a technique can only be measured by a rule tagged "
+         "with it), so every discordant technique points the same way and a McNemar test would only restate "
+         "their count. The overstatement is therefore reported as claimed-but-not-measured techniques / "
+         "techniques, in points, with a Wilson interval. *Gaps*: a tagged rule's (channel, EventID) target "
+         "never occurs in a recording of the technique (telemetry) or does occur but no tagged rule matched "
+         "(rule logic).", "",
          "| Source | Rule set | Recordings | Techniques | Claimed | Measured [95% CI] | Fully detected "
-         "| Overstatement (pts) | McNemar p | Gaps (telemetry / rule logic) |",
+         "| Claimed, not measured | Overstatement, pts [95% CI] | Gaps (telemetry / rule logic) |",
          "|---|---|---:|---:|---:|---:|---:|---:|---:|---|"]
     for src, e in r["sources"].items():
         for name, d in (e.get("rulesets") or {}).items():
@@ -239,15 +275,34 @@ def render_md(r: dict[str, Any]) -> str:
             ci = d["ci95"]["technique_coverage"]
             g = cm["gap_classes"]
             L.append(f"| {src} | {name} | {e['recordings']} | {cm['techniques']} | {_pct(cm['claimed_rate'])} "
-                     f"| {_pct(cm['measured_rate'])} [{_pct(ci[0])}, {_pct(ci[1])}] "
-                     f"| {_pct(d['fully_detected_coverage'])} | {cm['overstatement_points']} | {cm['mcnemar_p']:.4g} "
+                     f"| {_pct(cm['measured_rate'])}{_ci(ci)} "
+                     f"| {_pct(d['fully_detected_coverage'])} | {cm['discordant_claimed_only']} "
+                     f"| {stats.pct(cm['overstatement_points'] / 100)}{_ci(cm.get('overstatement_ci95'))} "
                      f"| {g.get('telemetry_gap', 0)} / {g.get('rule_logic_gap', 0)} |")
         if not e.get("rulesets"):
             L.append(f"| {src} | - | 0 | - | - | - | - | - | - | - |")
+    L += ["", "Exact-ID variant (a rule tagged with exactly the recorded ID, not just its family):", "",
+          "| Source | Rule set | Claimed (exact ID) | Measured (exact ID) [95% CI] | Overstatement, pts [95% CI] |",
+          "|---|---|---:|---:|---:|"]
+    for src, e in r["sources"].items():
+        for name, d in (e.get("rulesets") or {}).items():
+            x = d["claimed_vs_measured"].get("exact_id")
+            if x:
+                L.append(f"| {src} | {name} | {_pct(x['claimed_rate'])} | {_pct(x['measured_rate'])}"
+                         f"{_ci(x['measured_ci95'])} | {stats.pct(x['overstatement_points'] / 100)}"
+                         f"{_ci(x['overstatement_ci95'])} |")
+    up = [(src, name, d["unparsed_channel"]) for src, e in r["sources"].items()
+          for name, d in (e.get("rulesets") or {}).items() if d.get("unparsed_channel") and name == "sigma-all"]
+    if up:
+        L += ["", "Events whose channel could not be parsed (no rule can match them): " + "; ".join(
+            f"{src} {u['events']} of {u['events_total']} events in {u['recordings']} recordings"
+            for src, _, u in up) + "."]
     x = r.get("cross_dataset") or {}
     if x:
+        p_s = f"; exact McNemar p = {x['mcnemar_p']:.3g} for the {len(x['otrf_only_detected'])} vs " \
+              f"{len(x['splunk_only_detected'])} discordant techniques" if "mcnemar_p" in x else ""
         L += ["", f"OTRF vs Splunk (Windows, sigma-all): {x['shared_techniques']} techniques recorded in both; "
-              f"measured outcome agrees on {x['agree']}. Detected only on OTRF: "
+              f"measured outcome agrees on {x['agree']}{_ci(x.get('agree_ci95'))}{p_s}. Detected only on OTRF: "
               f"{', '.join(x['otrf_only_detected']) or 'none'}; only on Splunk: "
               f"{', '.join(x['splunk_only_detected']) or 'none'}."]
     h = r.get("held_out_selection")
@@ -261,7 +316,7 @@ def render_md(r: dict[str, Any]) -> str:
               f"| Unweighted greedy | {_pct(u['test_technique_coverage'])} | {_pct(u['test_ransomware_weighted'])} "
               f"| {_pct(u['random_draws_at_or_above'])} |",
               f"| Random {h['k']} of {h['candidate_rules']} OTRF-firing rules ({rn['draws']} draws, mean "
-              f"[2.5, 97.5 pct]) | {_pct(rn['test_technique_coverage_mean'])} "
+              f"[2.5-97.5 percentile of the draws]) | {_pct(rn['test_technique_coverage_mean'])} "
               f"[{_pct(rn['test_technique_coverage_95'][0])}, {_pct(rn['test_technique_coverage_95'][1])}] "
               f"| {_pct(rn['test_ransomware_weighted_mean'])} [{_pct(rn['test_ransomware_weighted_95'][0])}, "
               f"{_pct(rn['test_ransomware_weighted_95'][1])}] | - |"]
