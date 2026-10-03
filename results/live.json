@@ -1,5 +1,6 @@
 {
- "run_id": "36995051317",
+ "run_id": "37092465944",
+ "commit": "82694b3835440521070d096d3350f75ef0c79674",
  "rulesets": {
   "sigma-all": {
    "audit_records": 256,
@@ -111,10 +112,12 @@
      "measured": false
     }
    },
+   "techniques_measured": 0,
+   "techniques_claimed": 3,
    "technique_coverage": 0.0,
    "technique_coverage_ci95": [
     0.0,
-    0.4899
+    0.4898908403969213
    ],
    "claimed_coverage": 0.75
   },
@@ -250,10 +253,12 @@
      "measured": false
     }
    },
+   "techniques_measured": 3,
+   "techniques_claimed": 4,
    "technique_coverage": 0.75,
    "technique_coverage_ci95": [
-    0.3006,
-    0.9544
+    0.3006418400969081,
+    0.954412739704631
    ],
    "claimed_coverage": 1.0
   }
@@ -270,6 +275,291 @@
    "T1082": false,
    "T1057": null,
    "T1053.003": false
+  }
+ },
+ "replayed_recordings": [
+  {
+   "id": "SPLK-77d03c0c-5e07-11ef-b158-acde48001122",
+   "techniques": [
+    "T1033"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 3,
+   "execve_records": 0,
+   "syscall_records": 3,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-4cb6c050-1ab2-11f0-a1c6-629be3538069",
+   "techniques": [
+    "T1033"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 3,
+   "execve_records": 0,
+   "syscall_records": 3,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-d01afb53-3320-46ce-9590-31df1f5c11b4",
+   "techniques": [
+    "T1033"
+   ],
+   "sourcetypes": [
+    "sysmon:linux"
+   ],
+   "events": 4,
+   "execve_records": 0,
+   "syscall_records": 0,
+   "sysmon_process_creation": 2,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": [
+     "Local System Accounts Discovery - Linux (T1087.001)"
+    ]
+   }
+  },
+  {
+   "id": "SPLK-1ea06ecf-1423-4f00-a3b0-66bc2be38008@linux",
+   "techniques": [
+    "T1033"
+   ],
+   "sourcetypes": [
+    "sysmon:linux"
+   ],
+   "events": 2,
+   "execve_records": 0,
+   "syscall_records": 0,
+   "sysmon_process_creation": 1,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": [
+     "Local System Accounts Discovery - Linux (T1087.001)"
+    ]
+   }
+  },
+  {
+   "id": "SPLK-ebb93346-cab0-11f0-9d54-629be353806a",
+   "techniques": [
+    "T1053.003"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 20,
+   "execve_records": 0,
+   "syscall_records": 0,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-3c9236a6-c537-11ec-bdfa-acde48001122",
+   "techniques": [
+    "T1053.003"
+   ],
+   "sourcetypes": [
+    "sysmon:linux"
+   ],
+   "events": 332,
+   "execve_records": 0,
+   "syscall_records": 0,
+   "sysmon_process_creation": 44,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": [
+     "Crontab Enumeration (T1007)",
+     "File Deletion (T1070.004)",
+     "Process Discovery (T1057)"
+    ]
+   }
+  },
+  {
+   "id": "SPLK-6f8a621e-45d5-11f0-9bec-629be3538068",
+   "techniques": [
+    "T1053.003"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 19,
+   "execve_records": 0,
+   "syscall_records": 0,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-0a6dfea0-5647-11ef-b567-acde48001122",
+   "techniques": [
+    "T1053.003"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 3,
+   "execve_records": 0,
+   "syscall_records": 1,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-4bed5528-1ab0-11f0-a1c6-629be3538069",
+   "techniques": [
+    "T1053.003"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 3,
+   "execve_records": 0,
+   "syscall_records": 3,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-f0ce5c20-5645-11ef-b567-acde48001122",
+   "techniques": [
+    "T1082"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 1,
+   "execve_records": 0,
+   "syscall_records": 1,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-10da084a-1ab1-11f0-a1c6-629be3538069",
+   "techniques": [
+    "T1082"
+   ],
+   "sourcetypes": [
+    "auditd"
+   ],
+   "events": 1,
+   "execve_records": 0,
+   "syscall_records": 1,
+   "sysmon_process_creation": 0,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  },
+  {
+   "id": "SPLK-678e0d41-1fb6-40e4-8556-fc5168784634@linux",
+   "techniques": [
+    "T1082"
+   ],
+   "sourcetypes": [
+    "sysmon:linux"
+   ],
+   "events": 1,
+   "execve_records": 0,
+   "syscall_records": 0,
+   "sysmon_process_creation": 1,
+   "detected": {
+    "sigma-all": false,
+    "sigma-full": false
+   },
+   "other_rules_fired": {
+    "sigma-all": [],
+    "sigma-full": []
+   }
+  }
+ ],
+ "replay_completeness": {
+  "T1033": {
+   "recordings": 4,
+   "auditd": 2,
+   "auditd_with_execve": 0,
+   "sysmon_linux": 2,
+   "sysmon_with_process_creation": 2
+  },
+  "T1053.003": {
+   "recordings": 5,
+   "auditd": 4,
+   "auditd_with_execve": 0,
+   "sysmon_linux": 1,
+   "sysmon_with_process_creation": 1
+  },
+  "T1082": {
+   "recordings": 3,
+   "auditd": 2,
+   "auditd_with_execve": 0,
+   "sysmon_linux": 1,
+   "sysmon_with_process_creation": 1
   }
  }
 }

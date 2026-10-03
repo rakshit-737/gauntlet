@@ -1,0 +1,125 @@
+{
+ "runs": 4,
+ "run_ids": [
+  "36995051317",
+  "36998137511",
+  "37016216096",
+  "37092465944"
+ ],
+ "identical_outcomes": true,
+ "differing": [],
+ "per_run": [
+  {
+   "run_id": "36995051317",
+   "commit": null,
+   "labelled_events": {
+    "sigma-all": 67,
+    "sigma-full": 67
+   },
+   "outcomes": {
+    "sigma-all | whoami": false,
+    "sigma-all | /usr/bin/whoami": false,
+    "sigma-all | id": false,
+    "sigma-all | uname -a": false,
+    "sigma-all | hostname": false,
+    "sigma-all | cat /etc/os-release": false,
+    "sigma-all | ps -ef": false,
+    "sigma-all | crontab -l": false,
+    "sigma-all | ls -la /etc/cron.d": false,
+    "sigma-full | whoami": true,
+    "sigma-full | /usr/bin/whoami": false,
+    "sigma-full | id": true,
+    "sigma-full | uname -a": true,
+    "sigma-full | hostname": true,
+    "sigma-full | cat /etc/os-release": true,
+    "sigma-full | ps -ef": true,
+    "sigma-full | crontab -l": false,
+    "sigma-full | ls -la /etc/cron.d": false
+   }
+  },
+  {
+   "run_id": "36998137511",
+   "commit": null,
+   "labelled_events": {
+    "sigma-all": 67,
+    "sigma-full": 67
+   },
+   "outcomes": {
+    "sigma-all | whoami": false,
+    "sigma-all | /usr/bin/whoami": false,
+    "sigma-all | id": false,
+    "sigma-all | uname -a": false,
+    "sigma-all | hostname": false,
+    "sigma-all | cat /etc/os-release": false,
+    "sigma-all | ps -ef": false,
+    "sigma-all | crontab -l": false,
+    "sigma-all | ls -la /etc/cron.d": false,
+    "sigma-full | whoami": true,
+    "sigma-full | /usr/bin/whoami": false,
+    "sigma-full | id": true,
+    "sigma-full | uname -a": true,
+    "sigma-full | hostname": true,
+    "sigma-full | cat /etc/os-release": true,
+    "sigma-full | ps -ef": true,
+    "sigma-full | crontab -l": false,
+    "sigma-full | ls -la /etc/cron.d": false
+   }
+  },
+  {
+   "run_id": "37016216096",
+   "commit": null,
+   "labelled_events": {
+    "sigma-all": 67,
+    "sigma-full": 67
+   },
+   "outcomes": {
+    "sigma-all | whoami": false,
+    "sigma-all | /usr/bin/whoami": false,
+    "sigma-all | id": false,
+    "sigma-all | uname -a": false,
+    "sigma-all | hostname": false,
+    "sigma-all | cat /etc/os-release": false,
+    "sigma-all | ps -ef": false,
+    "sigma-all | crontab -l": false,
+    "sigma-all | ls -la /etc/cron.d": false,
+    "sigma-full | whoami": true,
+    "sigma-full | /usr/bin/whoami": false,
+    "sigma-full | id": true,
+    "sigma-full | uname -a": true,
+    "sigma-full | hostname": true,
+    "sigma-full | cat /etc/os-release": true,
+    "sigma-full | ps -ef": true,
+    "sigma-full | crontab -l": false,
+    "sigma-full | ls -la /etc/cron.d": false
+   }
+  },
+  {
+   "run_id": "37092465944",
+   "commit": "82694b3835440521070d096d3350f75ef0c79674",
+   "labelled_events": {
+    "sigma-all": 67,
+    "sigma-full": 67
+   },
+   "outcomes": {
+    "sigma-all | whoami": false,
+    "sigma-all | /usr/bin/whoami": false,
+    "sigma-all | id": false,
+    "sigma-all | uname -a": false,
+    "sigma-all | hostname": false,
+    "sigma-all | cat /etc/os-release": false,
+    "sigma-all | ps -ef": false,
+    "sigma-all | crontab -l": false,
+    "sigma-all | ls -la /etc/cron.d": false,
+    "sigma-full | whoami": true,
+    "sigma-full | /usr/bin/whoami": false,
+    "sigma-full | id": true,
+    "sigma-full | uname -a": true,
+    "sigma-full | hostname": true,
+    "sigma-full | cat /etc/os-release": true,
+    "sigma-full | ps -ef": true,
+    "sigma-full | crontab -l": false,
+    "sigma-full | ls -la /etc/cron.d": false
+   }
+  }
+ ]
+}

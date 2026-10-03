@@ -1,0 +1,91 @@
+{
+ "commands": [
+  {
+   "argv": [
+    "whoami"
+   ],
+   "technique": "T1033",
+   "pid": 2928,
+   "start": 1790997240.2326827,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "/usr/bin/whoami"
+   ],
+   "technique": "T1033",
+   "pid": 2929,
+   "start": 1790997240.434622,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "id"
+   ],
+   "technique": "T1033",
+   "pid": 2930,
+   "start": 1790997240.6364145,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "uname",
+    "-a"
+   ],
+   "technique": "T1082",
+   "pid": 2931,
+   "start": 1790997240.840338,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "hostname"
+   ],
+   "technique": "T1082",
+   "pid": 2932,
+   "start": 1790997241.0421698,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "cat",
+    "/etc/os-release"
+   ],
+   "technique": "T1082",
+   "pid": 2933,
+   "start": 1790997241.2440786,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "ps",
+    "-ef"
+   ],
+   "technique": "T1057",
+   "pid": 2934,
+   "start": 1790997241.4459496,
+   "returncode": 0
+  },
+  {
+   "argv": [
+    "crontab",
+    "-l"
+   ],
+   "technique": "T1053.003",
+   "pid": 2935,
+   "start": 1790997241.6820812,
+   "returncode": 1
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/etc/cron.d"
+   ],
+   "technique": "T1053.003",
+   "pid": 2936,
+   "start": 1790997241.8862894,
+   "returncode": 0
+  }
+ ]
+}
