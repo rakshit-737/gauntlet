@@ -144,3 +144,11 @@ def test_rule_cites_references():
     r = rule({"sel": {"a": 1}, "condition": "sel"},
              references=["https://securitydatasets.com/notebooks/x.html"], description="d")
     assert r.cites("securitydatasets|mordor") and not r.cites("unrelated")
+
+
+def test_field_names_with_spaces_match_rule_fields():
+    # Windows Defender events name fields "Threat Name"; SigmaHQ windefend rules use ThreatName
+    r = rule({"sel": {"ThreatName|endswith": "EICAR_Test_File"}, "condition": "sel"},
+             logsource={"product": "windows", "service": "windefend"})
+    assert r.match(ev(**{"Threat Name": "Virus:DOS/EICAR_Test_File"}))
+    assert ev(**{"Threat Name": "a", "ThreatName": "b"}).get("threatname") == "b"  # a real field wins

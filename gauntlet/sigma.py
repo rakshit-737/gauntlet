@@ -147,7 +147,13 @@ class EventView:
     __slots__ = ("raw", "_low", "_blob", "alias")
 
     def __init__(self, raw: dict[str, Any], alias: dict[str, str] | None = None):
-        self.raw = {str(k).lower(): v for k, v in raw.items()}
+        low: dict[str, Any] = {}
+        for k, v in raw.items():
+            k = str(k).lower()
+            low[k] = v
+            if " " in k:  # Defender & co. name fields "Threat Name"; Sigma rules say ThreatName
+                low.setdefault(k.replace(" ", ""), v)
+        self.raw = low
         self._low: dict[str, str | None] = {}
         self._blob: str | None = None
         self.alias = alias or {}
