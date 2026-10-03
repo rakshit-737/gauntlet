@@ -147,8 +147,10 @@ class Fetcher:
             self.skipped = set()
 
     def _dest(self, rel: str) -> Path:
-        dest = (self.root / rel).resolve()
-        if ".." in Path(rel).parts or not dest.is_relative_to(self.root):
+        # lexical check: Path.resolve() touches the filesystem and, on Windows, can return a
+        # different spelling while worker threads are creating the same directories
+        dest = Path(os.path.normpath(self.root / rel))
+        if ".." in Path(rel).parts or Path(rel).is_absolute() or not dest.is_relative_to(self.root):
             raise ValueError(f"refusing path outside the data dir: {rel!r}")
         return dest
 
