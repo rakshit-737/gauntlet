@@ -1,14 +1,13 @@
 """GAUNTLET CLI: CTI prioritize -> emulate/replay -> detect -> score coverage.
 
 Real-data commands (ATT&CK KB shipped; recordings/rules via scripts/download_data.py):
-  profiles, plan, manifest, predict, replay, bench, kb
+  profiles, plan, manifest, predict, replay, bench, extended, live, compare, selftest, kb
 Offline simulation (no downloads, used by the regression demo): run / sim
 """
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -63,6 +62,11 @@ def _check_baseline(baseline: Path | None, data: dict) -> int:
 def cmd_sim(a) -> int:
     if a.profile not in cti.PROFILES:
         print(f"unknown simulated profile; choose from {list(cti.PROFILES)}", file=sys.stderr)
+        return 1
+    known = sorted({s for h in range_sim.DEFAULT_RANGE.hosts for s in h.log_sources})
+    bad = sorted(set(a.disable_source) - set(known))
+    if bad:  # a typo here would silently disable nothing and let a CI gate pass
+        print(f"unknown --disable-source {', '.join(bad)}; choose from {', '.join(known)}", file=sys.stderr)
         return 1
     rng = range_sim.without_sources(range_sim.DEFAULT_RANGE, set(a.disable_source))
     ranked, report = run_pipeline(a.profile, a.rules, a.top, a.seed, rng=rng)
@@ -139,6 +143,12 @@ def cmd_predict(a) -> int:
 
     kb = _kb(a)
     obs = {t.strip().upper() for t in a.observed.split(",") if t.strip()}
+    unknown = sorted(t for t in obs if t not in kb.techniques and kb.canonical(t) not in kb.techniques)
+    if unknown:
+        print(f"unknown ATT&CK technique id(s) {', '.join(unknown)} (ATT&CK v{kb.version})", file=sys.stderr)
+        if len(unknown) == len(obs):
+            return 1
+    obs = {kb.canonical(t) for t in obs if t not in unknown}
     model = CooccurrenceModel([g.techniques for g in kb.groups.values() if g.techniques])
     print(f"Observed: {', '.join(sorted(obs))}\nLikely next techniques (co-occurrence across "
           f"{model.n_sets} ATT&CK groups):")
@@ -225,20 +235,29 @@ def cmd_live(a) -> int:
     specs = {"sigma-all": f"sigma-linux:{paths.sigma_zip(root)}"}
     if a.full_rules:
         specs["sigma-full"] = f"sigma-linux:{a.full_rules}"
-    rep: dict = {"run_id": os.environ.get("GITHUB_RUN_ID"), "rulesets": {}, "replayed": {}}
+    rep: dict = {**paths.provenance(), "rulesets": {}, "replayed": {}}
     splunk = [d for d in mordor.load_splunk(root) if d.tactic_dir == "linux" and d.available and d.techniques]
     kb = load_kb()
+    replays: dict = {}
+    rule_maps: dict = {}
     for name, spec in specs.items():
         rules = replay.load_ruleset(spec)
         r = live.score(a.audit, a.labels, rules)
         rep["rulesets"][name] = r
         if splunk:
             res = replay.replay_many(spec, splunk, workers=a.workers, progress=False)
-            summ = coverage.score(name, res, {x.id: x for x in rules}, kb)
+            rule_maps[name] = {x.id: x for x in rules}
+            replays[name] = res
+            summ = coverage.score(name, res, rule_maps[name], kb)
             got = {t.technique: t.detected > 0 for t in summ.techniques}
             rep["replayed"][name] = {t: got.get(kb.canonical(t)) for t in r["techniques"]}
-        print(f"[{name}] live technique coverage {r['technique_coverage']:.0%} "
+        print(f"[{name}] live: {r['techniques_measured']} of {len(r['techniques'])} techniques detected "
               f"({r['labelled_events']} labelled events, {r['audit_records']} audit records)")
+    if splunk:
+        techs = sorted({t for r in rep["rulesets"].values() for t in r["techniques"]})
+        recs = live.replayed_recordings(techs, splunk, replays, rule_maps, kb)
+        rep["replayed_recordings"] = recs
+        rep["replay_completeness"] = live.completeness(recs)
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "live.json").write_text(json.dumps(rep, indent=1), encoding="utf-8")
     (a.out / "LIVE.md").write_text(live.render_md(rep), encoding="utf-8")
@@ -246,6 +265,19 @@ def cmd_live(a) -> int:
         print("no labelled events: auditd captured nothing for the allowlisted commands", file=sys.stderr)
         return 1
     return 0
+
+
+def cmd_selftest(a) -> int:
+    from . import selftest
+
+    if not (a.sigma_checkout / "regression_data").is_dir():
+        print(f"no regression_data/ under {a.sigma_checkout}; clone the SigmaHQ tag first "
+              f"(git clone --depth 1 --branch {paths.SIGMA_TAG} https://github.com/SigmaHQ/sigma)", file=sys.stderr)
+        return 1
+    rep = selftest.run(a.sigma_checkout, a.out)
+    print(f"{rep['fired']} of {rep['tested']} SigmaHQ regression samples fire their rule "
+          f"(recall {rep['recall']:.1%}); status {rep['status']} -> {a.out / 'SELFTEST.md'}")
+    return 0 if rep["tested"] else 1
 
 
 def cmd_compare(a) -> int:
@@ -345,6 +377,10 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--out", type=Path, default=Path("live-out"), help="output directory")
     pc = sub.add_parser("compare", help="compare measured coverage with published numbers (CTID, RedGap)")
     pc.add_argument("--results", type=Path, default=Path("results"), help="results directory to read and write")
+    pt = sub.add_parser("selftest", help="evaluator fidelity: SigmaHQ regression samples through their own rules")
+    pt.add_argument("--sigma-checkout", type=Path, required=True,
+                    help=f"SigmaHQ checkout of {paths.SIGMA_TAG} (needs regression_data/)")
+    pt.add_argument("--out", type=Path, default=Path("results"), help="output directory")
     pk = sub.add_parser("kb", help="rebuild the shipped ATT&CK / ART derivatives from the downloads")
     pk.add_argument("--stix", type=Path, help="ATT&CK STIX bundle (default: downloaded v19.2)")
     pk.add_argument("--art-csv", type=Path, help="Atomic Red Team windows-index.csv")
@@ -362,7 +398,8 @@ def main(argv: list[str] | None = None) -> int:
     a = p.parse_args(argv)
     handlers = {"profiles": cmd_profiles, "plan": cmd_plan, "manifest": cmd_manifest, "predict": cmd_predict,
                 "replay": cmd_replay, "bench": cmd_bench, "extended": cmd_extended,
-                "live": cmd_live, "compare": cmd_compare, "kb": cmd_kb, "run": cmd_sim, "sim": cmd_sim}
+                "live": cmd_live, "compare": cmd_compare, "selftest": cmd_selftest, "kb": cmd_kb,
+                "run": cmd_sim, "sim": cmd_sim}
     try:
         return handlers[a.cmd](a)
     except KeyError as e:

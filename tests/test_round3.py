@@ -52,13 +52,21 @@ def test_live_score_event_level(tmp_path):
 def test_claimed_vs_measured_and_gaps():
     rules = {r.id: r for r in [lrule("a", "T1033", {"Image|endswith": "/whoami"}),
                                lrule("b", "T1082", {"Image|endswith": "/uname"})]}
-    res = [ReplayResult("d1", ("T1033",), 5, {"auditd-exec": 5}, {"a": {"auditd-exec": 1}}),
-           ReplayResult("d2", ("T1082",), 5, {"auditd-exec": 5}, {}),
-           ReplayResult("d3", ("T1082.001",), 5, {"auditd": 5}, {})]
+    res = [ReplayResult("d1", ("T1033",), 5, {"auditd-exec": 5}, {"a": {"auditd-exec": 1}}, {"auditd-exec|1": 5}),
+           ReplayResult("d2", ("T1082",), 5, {"auditd-exec": 5}, {}, {"auditd-exec|1": 5}),
+           ReplayResult("d3", ("T1082.001",), 5, {"auditd": 5}, {}, {"auditd|None": 5}),
+           # right channel, wrong event type: the rule could not fire -> telemetry gap, not rule logic
+           ReplayResult("d4", ("T1082.002",), 5, {"linux-sysmon/operational": 5}, {},
+                        {"linux-sysmon/operational|3": 5})]
     out = extended.claimed_vs_measured(res, rules)
-    assert out["claimed"] == 3 and out["measured"] == 1
+    assert out["claimed"] == 4 and out["measured"] == 1
     gaps = {r["technique"]: r["gap"] for r in out["rows"]}
-    assert gaps == {"T1033": None, "T1082": "rule_logic_gap", "T1082.001": "telemetry_gap"}
+    assert gaps == {"T1033": None, "T1082": "rule_logic_gap", "T1082.001": "telemetry_gap",
+                    "T1082.002": "telemetry_gap"}
+    # nested comparison: reported as an interval on claimed-only / techniques, not a McNemar test
+    assert out["discordant_measured_only"] == 0 and "mcnemar_p" not in out
+    assert out["overstatement_points"] == 75.0 and stats.fmt_ci(out["overstatement_ci95"]) == " [30.1, 95.4]"
+    assert out["exact_id"]["claimed"] == 2 and out["exact_id"]["measured"] == 1
 
 
 def test_exact_tests():
@@ -72,12 +80,19 @@ def test_splunk_and_compound_loaders(tmp_path):
                            "files": [{"path": "datasets/attack_techniques/T1033/x/a.log", "sourcetype": "auditd"}]},
                           {"id": "SPLK-2", "title": "w", "techniques": ["T1003.001"],
                            "files": [{"path": "datasets/attack_techniques/T1003.001/y/b.log",
-                                      "sourcetype": "XmlWinEventLog"}]}]}
+                                      "sourcetype": "XmlWinEventLog"}]},
+                          {"id": "SPLK-3", "title": "mixed", "techniques": ["T1082"],
+                           "files": [{"path": "datasets/attack_techniques/T1082/z/l.log", "sourcetype": "sysmon:linux"},
+                                     {"path": "datasets/attack_techniques/T1082/z/w.log",
+                                      "sourcetype": "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"}]}]}
     mp = tmp_path / "m.json"
     mp.write_text(json.dumps(man))
     ds = mordor.load_splunk(tmp_path, mp)
-    assert [(d.id, d.tactic_dir, d.source) for d in ds] == [("SPLK-1", "linux", "splunk"),
-                                                           ("SPLK-2", "windows", "splunk")]
+    # files are routed by sourcetype: a mixed recording is scored with both platforms' rules
+    assert [(d.id, d.tactic_dir, d.source, [f.name for f in d.files]) for d in ds] == [
+        ("SPLK-1", "linux", "splunk", ["a.log"]), ("SPLK-2", "windows", "splunk", ["b.log"]),
+        ("SPLK-3@linux", "linux", "splunk", ["l.log"]), ("SPLK-3@windows", "windows", "splunk", ["w.log"])]
+    assert mordor.splunk_sourcetypes(mp)["attack_techniques/T1082/z/l.log"] == "sysmon:linux"
     md = tmp_path / "mordor-compound" / "_metadata"
     md.mkdir(parents=True)
     (md / "LSASS_campaign_01.yaml").write_text(
@@ -160,7 +175,7 @@ def test_published_comparisons():
     r = published.redgap_vs_live(rg, live_rep, [{"technique": "T1082", "measured": False}])
     assert [(x["technique"], x["gauntlet_live"], x["gauntlet_splunk_replay"]) for x in r["rows"]] == [
         ("T1033", {"sigma-full": True}, None), ("T1082", None, False)]
-    assert "RedGap publishes 1/2" in published.render_md({"ctid": c, "redgap": r})
+    assert "reports 1/2 techniques detected" in published.render_md({"ctid": c, "redgap": r})
 
 
 def test_held_out_selection_runs():
@@ -181,3 +196,78 @@ def test_manifest_out_creates_missing_dir(tmp_path):
     out = tmp_path / "missing" / "plan.json"
     main(["manifest", "--profile", "ransomware", "--top", "3", "--out", str(out)])
     assert out.exists()
+
+
+def test_selftest_on_tiny_regression_checkout(tmp_path):
+    from gauntlet import cli, selftest
+
+    rule = """title: Defender threat
+id: 11111111-1111-1111-1111-111111111111
+status: test
+level: high
+tags: [attack.t1562.001]
+logsource: {product: windows, service: windefend}
+detection:
+  sel: {EventID: 1116, ThreatName|endswith: 'EICAR_Test_File'}
+  condition: sel
+"""
+    (tmp_path / "rules" / "windows").mkdir(parents=True)
+    (tmp_path / "rules" / "windows" / "r.yml").write_text(rule, encoding="utf-8")
+    d = tmp_path / "regression_data" / "rules" / "windows" / "builtin" / "r"
+    d.mkdir(parents=True)
+    (d / "info.yml").write_text(
+        "rule_metadata:\n  - id: 11111111-1111-1111-1111-111111111111\n    title: Defender threat\n"
+        "regression_tests_info:\n  - name: Positive Detection Test\n    type: evtx\n    match_count: 1\n"
+        "    path: regression_data/rules/windows/builtin/r/11111111-1111-1111-1111-111111111111.evtx\n",
+        encoding="utf-8")
+    ev = {"Event": {"System": {"Channel": "Microsoft-Windows-Windows Defender/Operational",
+                               "EventID": {"#attributes": {"Qualifiers": 0}, "#text": 1116},
+                               "Provider": {"#attributes": {"Name": "Microsoft-Windows-Windows Defender"}}},
+                    "EventData": {"Threat Name": "Virus:DOS/EICAR_Test_File"}}}
+    (d / "11111111-1111-1111-1111-111111111111.json").write_text(json.dumps(ev, indent=2), encoding="utf-8")
+    rep = selftest.run(tmp_path, tmp_path / "out")
+    # "Threat Name" in the event matches ThreatName in the rule, as SigmaHQ's own checker does
+    assert (rep["tested"], rep["fired"], rep["exact_match_count"]) == (1, 1, 1)
+    assert "**1 of 1**" in (tmp_path / "out" / "SELFTEST.md").read_text(encoding="utf-8")
+    assert cli.main(["selftest", "--sigma-checkout", str(tmp_path / "nope"), "--out", str(tmp_path)]) == 1
+
+
+def test_live_replay_completeness_note(tmp_path):
+    aud = tmp_path / "splunk" / "attack_techniques" / "T1033" / "a" / "a.log"
+    aud.parent.mkdir(parents=True)
+    aud.write_text('type=SYSCALL msg=audit(1.0:1): syscall=59 pid=5 exe="/usr/bin/id"\n'
+                   'type=PATH msg=audit(1.0:1): name="/usr/bin/id"\n', encoding="utf-8")
+    sym = tmp_path / "splunk" / "attack_techniques" / "T1033" / "s" / "s.log"
+    sym.parent.mkdir(parents=True)
+    sym.write_text("<Event><System><EventID>1</EventID><Channel>Linux-Sysmon/Operational</Channel></System>"
+                   "<EventData><Data Name='Image'>/usr/bin/id</Data></EventData></Event>\n", encoding="utf-8")
+    st = {"attack_techniques/T1033/a/a.log": "auditd", "attack_techniques/T1033/s/s.log": "sysmon:linux"}
+    pa = live.telemetry_profile(mordor.Dataset("A", "", ("T1033",), (aud,), "linux", "splunk"), st)
+    ps = live.telemetry_profile(mordor.Dataset("S", "", ("T1033",), (sym,), "linux", "splunk"), st)
+    assert (pa["sourcetypes"], pa["execve_records"], pa["syscall_records"]) == (["auditd"], 0, 1)
+    assert (ps["sourcetypes"], ps["sysmon_process_creation"]) == (["sysmon:linux"], 1)
+    recs = [{"id": "A", "techniques": ["T1033"], **pa, "detected": {"x": False}, "other_rules_fired": {"x": []}},
+            {"id": "S", "techniques": ["T1033"], **ps, "detected": {"x": False},
+             "other_rules_fired": {"x": ["Local System Accounts Discovery - Linux (T1087.001)"]}}]
+    assert live.completeness(recs) == {"T1033": {"recordings": 2, "auditd": 1, "auditd_with_execve": 0,
+                                                 "sysmon_linux": 1, "sysmon_with_process_creation": 1}}
+    r = {"rules": 1, "audit_records": 2, "labelled_events": 1, "background_events": 1, "techniques": {"T1033": {}},
+         "techniques_measured": 0, "techniques_claimed": 1, "technique_coverage": 0.0,
+         "technique_coverage_ci95": [0.0, 0.79], "claimed_coverage": 1.0, "background_rules_fired": [],
+         "commands": [{"command": "id", "technique": "T1033", "labelled_events": 1, "claimed": True,
+                       "measured": False}]}
+    md = live.render_md({"run_id": "123", "commit": "abcdef0123", "rulesets": {"x": r}, "replayed_recordings": recs})
+    assert "run [123]" in md and "`abcdef0`" in md
+    assert "| `id` | T1033 | 1 | yes | no | 0 of 1 | 0 of 1 |" in md
+    assert "1 are auditd extracts; 0 of them contain an `EXECVE` record" in md
+    assert "(T1087.001)" in md
+
+
+def test_cli_rejects_unknown_inputs(capsys):
+    from gauntlet import cli
+
+    assert cli.main(["sim", "--profile", "ransomware", "--disable-source", "edr"]) == 1
+    assert "choose from" in capsys.readouterr().err
+    assert cli.main(["predict", "--observed", "T9999"]) == 1
+    assert cli.main(["predict", "--observed", "T9999,T1059.001", "-k", "2"]) == 0
+    assert "unknown ATT&CK technique id(s) T9999" in capsys.readouterr().err
