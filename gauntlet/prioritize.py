@@ -170,7 +170,7 @@ def evaluate_logo(kb: KnowledgeBase, profile: str, universe: set[str], ks=(10, 2
                 m.setdefault("steps_to_50%", []).append(steps_to(curve, 0.5))
                 m.setdefault("steps_to_80%", []).append(steps_to(curve, 0.8))
                 m.setdefault("auc", []).append(sum(curve) / len(curve))
-    summary = {s: {k: round(statistics.fmean(v), 4) for k, v in m.items()} for s, m in per.items() if m}
+    summary = {s: {k: statistics.fmean(v) for k, v in m.items()} for s, m in per.items() if m}
     # per-group values (random: mean over its seeds) -> bootstrap CIs over held-out groups
     per_group: dict[str, dict[str, list[float]]] = {}
     for s, m in per.items():
@@ -180,9 +180,11 @@ def evaluate_logo(kb: KnowledgeBase, profile: str, universe: set[str], ks=(10, 2
           for s, m in per_group.items() if m}
     paired = {}
     if n_eval:
-        for other in ("breadth", "prevalence", "random"):
-            paired[f"cti_minus_{other}"] = {
-                k: _paired(per_group["cti"][k], per_group[other][k]) for k in ("steps_to_80%", "auc")}
+        pairs = [("cti", "breadth"), ("cti", "prevalence"), ("cti", "random"),
+                 ("breadth", "random")]  # is ATT&CK-ID order any better than chance?
+        for one, other in pairs:
+            paired[f"{one}_minus_{other}"] = {
+                k: _paired(per_group[one][k], per_group[other][k]) for k in ("steps_to_80%", "auc")}
     mean_curves = {s: [round(statistics.fmean(c[i] for c in cs), 4) for i in range(min(map(len, cs)))]
                    for s, cs in curves.items() if cs}
     return {"profile": profile, "groups_in_profile": len(groups), "groups_evaluated": n_eval,

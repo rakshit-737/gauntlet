@@ -86,9 +86,9 @@ class CoverageSummary:
     def to_dict(self) -> dict[str, Any]:
         return {
             "ruleset": self.ruleset, "rules": self.n_rules, "datasets": self.datasets,
-            "dataset_recall": round(self.dataset_recall, 4),
+            "dataset_recall": self.dataset_recall,
             "datasets_any_alert": self.datasets_any_alert,
-            "technique_coverage": round(self.technique_coverage, 4),
+            "technique_coverage": self.technique_coverage,
             "techniques": len(self.techniques), "events": self.events,
             "off_target_rules_per_dataset": round(self.off_target_rules_per_dataset, 2),
             "off_target_alerts_per_10k_events": round(self.off_target_alerts_per_10k, 2),
@@ -176,7 +176,7 @@ def greedy_rule_selection(results: Sequence[ReplayResult], rules: dict[str, Sigm
         got |= gain
         out.append({"rule": rules[best].title or best, "id": best, "path": rules[best].path,
                     "new_techniques": sorted(gain),
-                    "cumulative_weighted_coverage": round(sum(w(t) for t in got) / total, 4)})
+                    "cumulative_weighted_coverage": sum(w(t) for t in got) / total})
     return out
 
 
@@ -190,7 +190,7 @@ def channel_ablation(results: Sequence[ReplayResult], rules: dict[str, SigmaRule
         s = score(f"-{ch}", results, rules, kb, drop_channels=[ch])
         lost = base_cov - {t.technique for t in s.techniques if t.detected}
         out.append({"channel": ch, "techniques_lost": len(lost), "lost": sorted(lost),
-                    "coverage_without": round(s.technique_coverage, 4)})
+                    "coverage_without": s.technique_coverage})
     out.sort(key=lambda x: -x["techniques_lost"])
     return out
 

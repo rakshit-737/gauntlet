@@ -11,6 +11,17 @@ def test_wilson_bounds():
     assert stats.wilson(10, 10)[1] == 1.0
 
 
+@pytest.mark.parametrize("k,n,shown", [
+    (68, 188, " [29.6, 43.3]"), (3, 98, " [1.0, 8.6]"), (42, 55, " [63.7, 85.6]"),
+    (73, 188, " [32.2, 46.0]"), (3, 55, " [1.9, 14.9]"), (36, 55, " [52.3, 76.6]"),
+    (44, 55, " [67.6, 88.4]"), (110, 188, " [51.4, 65.3]"), (11, 55, " [11.6, 32.4]"),
+    (4, 55, " [2.9, 17.3]"), (0, 4, " [0.0, 49.0]"), (4, 4, " [51.0, 100.0]"),
+])
+def test_wilson_is_rounded_once_for_display(k, n, shown):
+    # regression: bounds used to be rounded to 4 decimals and then to 0.1 point, moving some by 0.1
+    assert stats.fmt_ci(stats.wilson(k, n)) == shown
+
+
 def test_bootstrap_ci_contains_mean_and_is_deterministic():
     vals = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
     lo, hi = stats.bootstrap_ci(vals)

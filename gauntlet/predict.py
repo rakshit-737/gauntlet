@@ -91,11 +91,12 @@ def evaluate(sets: Sequence[set[str]], ks=(5, 10, 20), hide: float = 0.5, seed: 
             rr = next((1 / i for i, t in enumerate(full[name], 1) if t in hidden), 0.0)
             m.setdefault("mrr", []).append(rr)
     out = {"groups_evaluated": n_eval, "hide_fraction": hide, "seed": seed,
-           "models": {k: {m: round(statistics.fmean(v), 4) for m, v in d.items()} for k, d in res.items()}}
+           "models": {k: {m: statistics.fmean(v) for m, v in d.items()} for k, d in res.items()}}
     if n_eval:
         out["ci95"] = {k: {m: list(stats.bootstrap_ci(d[m])) for m in ("recall@10", "mrr")} for k, d in res.items()}
         out["paired_recall@10"] = stats.paired_bootstrap_ci(res["cooccurrence"]["recall@10"],
                                                              res["popularity"]["recall@10"])
+        out["paired_mrr"] = stats.paired_bootstrap_ci(res["cooccurrence"]["mrr"], res["popularity"]["mrr"])
     return out
 
 
@@ -106,7 +107,7 @@ def evaluate_seeds(sets: Sequence[set[str]], seeds: Sequence[int] = range(5), **
     spread = {}
     for m in base["models"]:
         vals = [r["models"][m]["recall@10"] for r in runs]
-        spread[m] = {"recall@10_mean": round(statistics.fmean(vals), 4),
-                     "recall@10_sd": round(statistics.pstdev(vals), 4) if len(vals) > 1 else 0.0}
+        spread[m] = {"recall@10_mean": statistics.fmean(vals),
+                     "recall@10_sd": statistics.pstdev(vals) if len(vals) > 1 else 0.0}
     base["across_seeds"] = {"seeds": list(seeds), **spread}
     return base

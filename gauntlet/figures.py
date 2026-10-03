@@ -96,7 +96,7 @@ def claimed_vs_measured(ext: dict[str, Any], out: Path, ruleset: str = "sigma-al
         ax.plot([lo, hi], [i, i], color=SERIES[0], linewidth=1.5, zorder=2)
         ax.scatter([c], [i], color=SERIES[1], s=60, zorder=3, label="claimed by rule tags" if i == 0 else None)
         ax.scatter([m], [i], color=SERIES[0], s=60, zorder=3, label="measured (95% CI)" if i == 0 else None)
-        ax.text(c + 1.5, i, f"+{c - m:.0f} pts", va="center", fontsize=8, color=MUTED)
+        ax.text(c + 1.5, i, f"+{c - m:.1f} pts", va="center", fontsize=8, color=MUTED)
     ax.set_yticks(range(len(rows)))
     ax.set_yticklabels([f"{s} (n={cm['techniques']})" for s, cm in rows], color=INK)
     ax.invert_yaxis()
