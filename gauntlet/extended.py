@@ -148,7 +148,9 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
             n_cov = sum(t.detected > 0 for t in s.techniques)
             d = {k: v for k, v in s.to_dict().items() if k not in ("by_tactic",)}
             d["ci95"] = {"technique_coverage": list(stats.wilson(n_cov, len(s.techniques))),
-                         "dataset_recall": list(stats.wilson(s.datasets_detected, s.datasets))}
+                         "dataset_recall": list(stats.wilson(s.datasets_detected, s.datasets)),
+                         "fully_detected_coverage": list(stats.wilson(
+                             sum(t.outcome == "detected" for t in s.techniques), len(s.techniques)))}
             d["fully_detected_coverage"] = (
                 sum(t.outcome == "detected" for t in s.techniques) / max(len(s.techniques), 1))
             d["claimed_vs_measured"] = claimed_vs_measured(res, rules, kb)
@@ -197,10 +199,15 @@ def held_out_selection(train: tuple[list[replay.ReplayResult], dict[str, SigmaRu
     pool = sorted({r for res in tr_res for r in res.fired() if r in rules and coverage.on_target(
         rules[r].techniques, res.techniques)})
     out: dict[str, Any] = {"k": k, "train": "otrf", "test": "splunk-windows", "candidate_rules": len(pool)}
+    n_test = len(coverage.score("all", te_res, {}, kb).techniques)
+    out["test_techniques"] = n_test
     for name, w in (("greedy_cti_weighted", rel), ("greedy_unweighted", None)):
         sel = {x["id"] for x in coverage.greedy_rule_selection(tr_res, rules, w, top=k, kb=kb)}
         c, cw = test_cov(sel)
-        out[name] = {"test_technique_coverage": c, "test_ransomware_weighted": cw}
+        hit = round(c * n_test)
+        out[name] = {"test_technique_coverage": c, "test_techniques_covered": hit,
+                     "test_technique_coverage_ci95": list(stats.wilson(hit, n_test)),
+                     "test_ransomware_weighted": cw}
     rnd = random.Random(0)
     draws = [test_cov(set(rnd.sample(pool, min(k, len(pool))))) for _ in range(seeds)]
     cs, ws = sorted(d[0] for d in draws), sorted(d[1] for d in draws)
@@ -266,17 +273,19 @@ def render_md(r: dict[str, Any]) -> str:
          "techniques, in points, with a Wilson interval. *Gaps*: a tagged rule's (channel, EventID) target "
          "never occurs in a recording of the technique (telemetry) or does occur but no tagged rule matched "
          "(rule logic).", "",
-         "| Source | Rule set | Recordings | Techniques | Claimed | Measured [95% CI] | Fully detected "
-         "| Claimed, not measured | Overstatement, pts [95% CI] | Gaps (telemetry / rule logic) |",
+         "| Source | Rule set | Recordings | Techniques | Claimed [95% CI] | Measured [95% CI] "
+         "| Fully detected [95% CI] | Claimed, not measured | Overstatement, pts [95% CI] "
+         "| Gaps (telemetry / rule logic) |",
          "|---|---|---:|---:|---:|---:|---:|---:|---:|---|"]
     for src, e in r["sources"].items():
         for name, d in (e.get("rulesets") or {}).items():
             cm = d["claimed_vs_measured"]
             ci = d["ci95"]["technique_coverage"]
             g = cm["gap_classes"]
-            L.append(f"| {src} | {name} | {e['recordings']} | {cm['techniques']} | {_pct(cm['claimed_rate'])} "
-                     f"| {_pct(cm['measured_rate'])}{_ci(ci)} "
-                     f"| {_pct(d['fully_detected_coverage'])} | {cm['discordant_claimed_only']} "
+            L.append(f"| {src} | {name} | {e['recordings']} | {cm['techniques']} | {_pct(cm['claimed_rate'])}"
+                     f"{_ci(cm.get('claimed_ci95'))} | {_pct(cm['measured_rate'])}{_ci(ci)} "
+                     f"| {_pct(d['fully_detected_coverage'])}{_ci(d['ci95'].get('fully_detected_coverage'))} "
+                     f"| {cm['discordant_claimed_only']} "
                      f"| {stats.pct(cm['overstatement_points'] / 100)}{_ci(cm.get('overstatement_ci95'))} "
                      f"| {g.get('telemetry_gap', 0)} / {g.get('rule_logic_gap', 0)} |")
         if not e.get("rulesets"):
@@ -301,19 +310,30 @@ def render_md(r: dict[str, Any]) -> str:
     if x:
         p_s = f"; exact McNemar p = {x['mcnemar_p']:.3g} for the {len(x['otrf_only_detected'])} vs " \
               f"{len(x['splunk_only_detected'])} discordant techniques" if "mcnemar_p" in x else ""
+        n_x = max(x["shared_techniques"], 1)
         L += ["", f"OTRF vs Splunk (Windows, sigma-all): {x['shared_techniques']} techniques recorded in both; "
-              f"measured outcome agrees on {x['agree']}{_ci(x.get('agree_ci95'))}{p_s}. Detected only on OTRF: "
+              f"measured outcome agrees on {x['agree']} of them ({_pct(x['agree'] / n_x)}, 95% Wilson"
+              f"{_ci(x.get('agree_ci95'))}){p_s}. Detected only on OTRF: "
               f"{', '.join(x['otrf_only_detected']) or 'none'}; only on Splunk: "
               f"{', '.join(x['splunk_only_detected']) or 'none'}."]
     h = r.get("held_out_selection")
     if h:
         g, u, rn = h["greedy_cti_weighted"], h["greedy_unweighted"], h["random"]
+        nt = h.get("test_techniques")
+
+        def gcov(x):
+            if "test_techniques_covered" not in x:
+                return _pct(x["test_technique_coverage"])
+            return (f"{_pct(x['test_technique_coverage'])} ({x['test_techniques_covered']} of {nt}, 95% Wilson"
+                    f"{_ci(x['test_technique_coverage_ci95'])})")
         L += ["", f"## Held-out rule selection: pick {h['k']} rules on OTRF, test on Splunk Windows", "",
+              "The last column is the share of random draws whose test ransomware-weighted coverage is at or "
+              "above the selection's (a one-sided permutation p-value).", "",
               "| Selection on OTRF | Test technique coverage | Test ransomware-weighted coverage "
               "| Random draws at or above |", "|---|---:|---:|---:|",
-              f"| CTI-weighted greedy | {_pct(g['test_technique_coverage'])} | {_pct(g['test_ransomware_weighted'])} "
+              f"| CTI-weighted greedy | {gcov(g)} | {_pct(g['test_ransomware_weighted'])} "
               f"| {_pct(g['random_draws_at_or_above'])} |",
-              f"| Unweighted greedy | {_pct(u['test_technique_coverage'])} | {_pct(u['test_ransomware_weighted'])} "
+              f"| Unweighted greedy | {gcov(u)} | {_pct(u['test_ransomware_weighted'])} "
               f"| {_pct(u['random_draws_at_or_above'])} |",
               f"| Random {h['k']} of {h['candidate_rules']} OTRF-firing rules ({rn['draws']} draws, mean "
               f"[2.5-97.5 percentile of the draws]) | {_pct(rn['test_technique_coverage_mean'])} "

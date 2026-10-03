@@ -6,6 +6,8 @@
   (e.g. one value per held-out ATT&CK group).
 * :func:`paired_bootstrap_ci` -- CI of the mean *difference* between two strategies
   measured on the same units (like-for-like comparison).
+* :func:`weighted_bootstrap_ci` -- CI of a weighted proportion (threat-weighted coverage),
+  resampling techniques.
 
 All resampling uses a fixed seed so results are reproducible. Nothing here rounds: the
 generators store full-precision values and the renderers round exactly once (rounding a
@@ -61,6 +63,26 @@ def bootstrap_ci(values: Sequence[float], n_boot: int = 2000, alpha: float = 0.0
     lo = means[int(alpha / 2 * n_boot)]
     hi = means[min(n_boot - 1, int((1 - alpha / 2) * n_boot))]
     return (lo, hi)
+
+
+def weighted_bootstrap_ci(hits: Sequence[float], weights: Sequence[float], n_boot: int = 2000,
+                          alpha: float = 0.05, seed: int = 0) -> tuple[float, float]:
+    """Percentile bootstrap CI of a weighted proportion sum(w*hit)/sum(w), resampling units (techniques)."""
+    pairs = [(h, w) for h, w in zip(hits, weights, strict=True)]
+    if not pairs or not sum(w for _, w in pairs):
+        return (0.0, 0.0)
+    rnd = random.Random(seed)
+    n = len(pairs)
+    est = []
+    for _ in range(n_boot):
+        num = den = 0.0
+        for _ in range(n):
+            h, w = pairs[rnd.randrange(n)]
+            num += w * h
+            den += w
+        est.append(num / den if den else 0.0)
+    est.sort()
+    return (est[int(alpha / 2 * n_boot)], est[min(n_boot - 1, int((1 - alpha / 2) * n_boot))])
 
 
 def paired_bootstrap_ci(a: Sequence[float], b: Sequence[float], n_boot: int = 2000, alpha: float = 0.05,

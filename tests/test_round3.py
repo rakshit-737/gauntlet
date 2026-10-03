@@ -189,6 +189,14 @@ def test_held_out_selection_runs():
     assert out["candidate_rules"] == 2
     assert out["greedy_unweighted"]["test_technique_coverage"] in (0.0, 0.5)
     assert 0.0 <= out["random"]["test_technique_coverage_mean"] <= 0.5
+    assert out["test_techniques"] == 2 and out["greedy_unweighted"]["test_techniques_covered"] in (0, 1)
+    rep = {"sigma_release": "r", "attack_version": "19.2", "sources": {}, "held_out_selection": out,
+           "cross_dataset": {"shared_techniques": 38, "agree": 31, "agree_ci95": list(stats.wilson(31, 38)),
+                             "otrf_only_detected": ["T1"] * 6, "splunk_only_detected": ["T2"],
+                             "mcnemar_p": stats.mcnemar_exact(6, 1)}}
+    md = extended.render_md(rep)
+    assert "agrees on 31 of them (81.6%, 95% Wilson [66.6, 90.8]); exact McNemar p = 0.125" in md
+    assert "of 2, 95% Wilson" in md and "one-sided permutation p-value" in md
 
 
 def test_manifest_out_creates_missing_dir(tmp_path):
@@ -285,3 +293,46 @@ def test_verify_results_ignores_timing_and_provenance(tmp_path):
     (b / "results.json").write_text(json.dumps({**base, "detection": {"x": {"technique_coverage": 0.7}}}))
     assert vr.main([str(a), str(b)]) == 1
     assert vr.diff([1, 2], [1, 2, 3]) == [": list length 2 != 3"]
+
+
+def _sigma_zip(root):
+    import zipfile
+
+    from conftest import SIGMA_RULES
+
+    from gauntlet import paths
+
+    z = paths.sigma_zip(root)
+    z.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(z, "w") as f:
+        for name, text in SIGMA_RULES.items():
+            f.writestr(f"rules/windows/process_creation/{name}", text)
+
+
+def test_bench_and_extended_end_to_end_on_mini_data(mini_data, monkeypatch):
+    """The generators run end to end and the rendered Markdown carries provenance and intervals."""
+    from gauntlet import bench, predict, prioritize
+
+    _sigma_zip(mini_data)
+    monkeypatch.setattr(prioritize, "PROFILE_PATTERNS", {"ransomware": prioritize.PROFILE_PATTERNS["ransomware"]})
+    fast = stats.bootstrap_ci
+    monkeypatch.setattr(stats, "bootstrap_ci", lambda v, n_boot=2000, *a, **kw: fast(v, 50, *a, **kw))
+    orig = predict.evaluate_seeds
+    monkeypatch.setattr(predict, "evaluate_seeds", lambda sets, **kw: orig(list(sets)[:20], seeds=range(2), **kw))
+    logo = prioritize.evaluate_logo
+    monkeypatch.setattr(prioritize, "evaluate_logo", lambda *a, **kw: logo(*a, random_seeds=2, **kw))
+    monkeypatch.setenv("GITHUB_RUN_ID", "4242")
+    monkeypatch.setenv("GITHUB_SHA", "0123456789abcdef")
+    out = mini_data / "out"
+    r = bench.run(mini_data, out, workers=1, figures=False, use_cache=False)
+    assert r["run_id"] == "4242" and r["recordings"] == 3
+    md = (out / "RESULTS.md").read_text(encoding="utf-8")
+    assert "run [4242]" in md and "`0123456`" in md and "95% Wilson" in md
+    assert "core_vs_all" in r and "mcnemar_p" not in r["core_vs_all"]
+    assert "weighted_coverage_ci95" in r["profiles"]["ransomware"]
+    assert "breadth_minus_random" in r["prioritization"]["ransomware"]["paired"]
+    e = extended.run(mini_data, out, workers=1, use_cache=False)
+    assert e["run_id"] == "4242"
+    cm = e["sources"]["otrf"]["rulesets"]["sigma-all"]["claimed_vs_measured"]
+    assert "overstatement_ci95" in cm and "exact_id" in cm
+    assert "run [4242]" in (out / "EXTENDED.md").read_text(encoding="utf-8")

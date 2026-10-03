@@ -106,8 +106,9 @@ def render_md(rep: dict[str, Any]) -> str:
          + (f" Inputs: {used}." if used else ""), "",
          "## CTID Top ATT&CK Techniques: `has_sigma` (claimed) vs measured on OTRF (sigma-all)", "",
          f"Of the {n} OTRF-recorded techniques listed by CTID, CTID flags {c['ctid_claimed']} "
-         f"({100 * c['ctid_claimed'] / max(n, 1):.0f}%) as having a Sigma rule; GAUNTLET measures an on-target "
-         f"detection for {c['measured']} ({100 * c['measured'] / max(n, 1):.0f}%) "
+         f"({stats.pct(c['ctid_claimed'] / max(n, 1))}%, 95% Wilson{stats.fmt_ci(c['claimed_ci95'])}) as having a "
+         f"Sigma rule; GAUNTLET measures an on-target detection for {c['measured']} "
+         f"({stats.pct(c['measured'] / max(n, 1))}%{stats.fmt_ci(c['measured_ci95'])}) "
          f"(exact McNemar p = {c['mcnemar_p']:.3g}, {len(c['claimed_not_measured'])} vs "
          f"{len(c['measured_not_claimed'])} discordant techniques; the two are not nested, so the test applies). "
          "Claimed but not measured: "

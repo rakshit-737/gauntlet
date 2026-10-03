@@ -131,7 +131,8 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         groups = prioritize.profile_groups(kb, p)
         rel = prioritize.relevance(groups)
         profiles[p] = {"groups": len(groups), "example_groups": [g.name for g in groups[:8]],
-                       "weighted_coverage": {n: s.weighted(rel) for n, s in summaries.items()}}
+                       "weighted_coverage": {n: s.weighted(rel) for n, s in summaries.items()},
+                       "weighted_coverage_ci95": {n: list(s.weighted_ci(rel)) for n, s in summaries.items()}}
     report["profiles"] = profiles
 
     main = "sigma-core" if "sigma-core" in summaries else next(iter(summaries))
@@ -167,12 +168,19 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
             merged.append(replay.ReplayResult(a.dataset_id, a.techniques, a.n_events, a.channels, hits))
         rules = {**rule_objs["legacy"], **{k: v for k, v in rule_objs["sigma-all"].items() if k in top_ids}}
         after = coverage.score("legacy+top10", merged, rules, kb)
+        lg = summaries["legacy"]
+        nb, na = sum(t.detected > 0 for t in lg.techniques), sum(t.detected > 0 for t in after.techniques)
         report["sprint"] = {"rules": "legacy + top-10 greedy cheapest-win rules from sigma-all",
-                            "in_sample": True,
-                            "before": summaries["legacy"].technique_coverage,
+                            "in_sample": True, "techniques": len(after.techniques),
+                            "before_covered": nb, "after_covered": na,
+                            "before": lg.technique_coverage,
+                            "before_ci95": list(stats.wilson(nb, len(lg.techniques))),
                             "after_top10_sigma_rules": after.technique_coverage,
-                            "before_weighted_ransomware": summaries["legacy"].weighted(rel_r),
-                            "after_weighted_ransomware": after.weighted(rel_r)}
+                            "after_ci95": list(stats.wilson(na, len(after.techniques))),
+                            "before_weighted_ransomware": lg.weighted(rel_r),
+                            "before_weighted_ransomware_ci95": list(lg.weighted_ci(rel_r)),
+                            "after_weighted_ransomware": after.weighted(rel_r),
+                            "after_weighted_ransomware_ci95": list(after.weighted_ci(rel_r))}
 
     # ---------------------------------------------------------------- prioritization
     timings = {"detection": round(time.time() - t0, 1)}
@@ -230,7 +238,8 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
          f"({r['recorded_techniques']} techniques / {r['recordings']} "
          "recordings are small samples; recordings are treated as independent). *Technique coverage* = at "
          "least one recording of the technique has an on-target alert (partially detected techniques count); "
-         "*fully detected* = every recording of it does.", "",
+         "*fully detected* = every recording of it does. The off-target columns are descriptive (an upper "
+         "bound on alert burden in one lab; alerts cluster within recordings, so no interval is given).", "",
          "| Rule set | Rules | Technique coverage | Fully detected | Exact-ID coverage | "
          "Coverage w/o OTRF-citing rules | Recordings detected | Off-target rules / recording "
          "| Off-target alerts / 10k events |",
@@ -261,23 +270,33 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
               f"95% Wilson{_ci(lc['drop_ci95'])}). With the narrower v1.0 pattern (OTRF names only) sigma-core "
               f"coverage would be {_pct(lc['narrow_pattern_technique_coverage'])}."]
     L += ["", "## Threat-weighted coverage per CTI profile", "",
+          "Each technique is weighted by the share of the profile's groups that use it. Brackets are 95% "
+          "percentile bootstrap intervals (2,000 resamples of the recorded techniques, seed 0).", "",
           "| Profile | ATT&CK groups | " + " | ".join(r["detection"]) + " |",
           "|---|---:|" + "---:|" * len(r["detection"])]
     for p, d in r["profiles"].items():
-        cells = " | ".join(_pct(d["weighted_coverage"][n]) for n in r["detection"])
+        cis = d.get("weighted_coverage_ci95", {})
+        cells = " | ".join(f"{_pct(d['weighted_coverage'][n])}{_ci(cis.get(n))}" for n in r["detection"])
         L.append(f"| {p} | {d['groups']} | {cells} |")
     if "sprint" in r:
         s = r["sprint"]
+        n_s = s.get("techniques")
+        cnt = (lambda k: f" ({s[k]} of {n_s})") if n_s else (lambda k: "")
         L += ["", "## Coverage sprint (demo scenario 5)", "",
-              f"Hand-written baseline rules: **{_pct(s['before'])}** technique coverage "
-              f"({_pct(s['before_weighted_ransomware'])} ransomware-weighted). Adding only the top-10 "
-              f"greedy cheapest-win rules **from sigma-all** (listed below): **{_pct(s['after_top10_sigma_rules'])}** "
-              f"({_pct(s['after_weighted_ransomware'])} ransomware-weighted). In-sample: the rules are selected "
-              "and scored on the same recordings, so this is optimistic."]
+              f"Hand-written baseline rules: **{_pct(s['before'])}**{cnt('before_covered')}"
+              f"{_ci(s.get('before_ci95'))} technique coverage "
+              f"({_pct(s['before_weighted_ransomware'])}{_ci(s.get('before_weighted_ransomware_ci95'))} "
+              "ransomware-weighted). Adding only the top-10 greedy cheapest-win rules **from sigma-all** (listed "
+              f"below): **{_pct(s['after_top10_sigma_rules'])}**{cnt('after_covered')}{_ci(s.get('after_ci95'))} "
+              f"({_pct(s['after_weighted_ransomware'])}{_ci(s.get('after_weighted_ransomware_ci95'))} "
+              "ransomware-weighted). Wilson and bootstrap intervals as above. In-sample: the rules are selected "
+              "and scored on the same recordings, so this is optimistic and the intervals do not cover the "
+              "selection; the held-out OTRF-to-Splunk check is in EXTENDED.md."]
     for title, key in (("sigma-all (used by the sprint)", "cheapest_wins_all"), ("sigma-core", "cheapest_wins")):
         if key not in r:
             continue
         L += ["", f"## Cheapest wins (greedy, ransomware-weighted, {title})", "",
+              "The cumulative column is the in-sample greedy path (descriptive, no interval).", "",
               "| # | Rule | New techniques | Cumulative weighted coverage |", "|---:|---|---|---:|"]
         for i, w in enumerate(r[key], 1):
             L.append(f"| {i} | {w['rule']} | {', '.join(w['new_techniques'])} "
@@ -291,18 +310,29 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
     for a in r["channel_ablation"]:
         L.append(f"| {a['channel']} | {a['techniques_lost']} | {stats.pct(a['techniques_lost'] / n_t)}"
                  f"{_ci(a.get('lost_ci95'))} | {_pct(a['coverage_without'])} |")
-    L += ["", "## Per-tactic coverage (sigma-core)", "", "| Tactic | Covered / recorded techniques |", "|---|---:|"]
+    L += ["", "## Per-tactic coverage (sigma-core)", "",
+          "| Tactic | Covered / recorded techniques | 95% Wilson (%) |", "|---|---:|---:|"]
     for k, (a, b) in main.by_tactic().items():
-        L.append(f"| {k} | {a}/{b} |")
+        L.append(f"| {k} | {a}/{b} |{_ci(stats.wilson(a, b))} |")
     L += ["", "## Prioritization: CTI-ranked vs breadth-first emulation (leave-one-group-out)", "",
           "Recall of a held-out actor's techniques after k emulations, universe = Windows techniques "
           "with an Atomic Red Team test. Lower `steps to 80%` is better.", "",
-          "| Profile | Strategy | recall@10 | recall@25 | recall@50 | steps to 50% | steps to 80% | AUC |",
+          "| Profile | Strategy | recall@10 | recall@25 | recall@50 | steps to 50% | steps to 80% [95% CI] "
+          "| AUC [95% CI] |",
           "|---|---|---:|---:|---:|---:|---:|---:|"]
     for p, d in r["prioritization"].items():
+        rel_ci = d["groups_evaluated"] >= prioritize.SMALL_N
         for s, m in d["strategies"].items():
+            ci = d.get("ci95", {}).get(s, {})
+            st = ci.get("steps_to_80%") if rel_ci else None
+            au = ci.get("auc") if rel_ci else None
+            st_s = f" [{st[0]:.1f}, {st[1]:.1f}]" if st else ""
+            au_s = f" [{au[0]:.3f}, {au[1]:.3f}]" if au else ""
             L.append(f"| {p} (n={d['groups_evaluated']}) | {s} | {m['recall@10']:.3f} | {m['recall@25']:.3f} "
-                     f"| {m['recall@50']:.3f} | {m['steps_to_50%']:.1f} | {m['steps_to_80%']:.1f} | {m['auc']:.3f} |")
+                     f"| {m['recall@50']:.3f} | {m['steps_to_50%']:.1f} | {m['steps_to_80%']:.1f}{st_s} "
+                     f"| {m['auc']:.3f}{au_s} |")
+    L += ["", "Brackets: 95% percentile bootstrap over held-out groups (2,000 resamples, seed 0); not shown "
+          "for profiles with fewer than 10 groups."]
     L += ["", "Paired comparison over held-out groups (mean difference, 95% paired percentile bootstrap CI and "
           "exact sign-test p; negative steps = the first strategy needs fewer emulations). With fewer than 10 "
           "held-out groups the bootstrap CI is not reported; the per-group differences are shown instead.", "",
@@ -319,11 +349,17 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
             L.append(f"| {p} (n={d['groups_evaluated']}) | {c.replace('_', ' ')} | {a_s} "
                      f"| {_p(a.get('sign_test_p'))} | {b_s} |")
     L += ["", "## Next-technique prediction (co-occurrence vs popularity, leave-one-group-out)", "",
-          "| Level | Model | recall@5 | recall@10 | recall@20 | MRR |", "|---|---|---:|---:|---:|---:|"]
+          "| Level | Model | recall@5 | recall@10 [95% CI] | recall@20 | MRR [95% CI] |",
+          "|---|---|---:|---:|---:|---:|"]
     for lvl, d in r["prediction"].items():
         for m, v in d["models"].items():
-            L.append(f"| {lvl} (n={d['groups_evaluated']}) | {m} | {v['recall@5']:.3f} | {v['recall@10']:.3f} "
-                     f"| {v['recall@20']:.3f} | {v['mrr']:.3f} |")
+            ci = d.get("ci95", {}).get(m, {})
+            rc, mc = ci.get("recall@10"), ci.get("mrr")
+            rc_s = f" [{rc[0]:.3f}, {rc[1]:.3f}]" if rc else ""
+            mc_s = f" [{mc[0]:.3f}, {mc[1]:.3f}]" if mc else ""
+            L.append(f"| {lvl} (n={d['groups_evaluated']}) | {m} | {v['recall@5']:.3f} | {v['recall@10']:.3f}{rc_s} "
+                     f"| {v['recall@20']:.3f} | {v['mrr']:.3f}{mc_s} |")
+    L += ["", "Brackets: 95% percentile bootstrap over held-out groups (seed 0 hide split)."]
     L += ["", "| Level | co-occurrence − popularity recall@10 (95% paired bootstrap CI) "
           "| co-occurrence − popularity MRR (95% paired bootstrap CI) "
           "| recall@10 mean ± sd over 5 hide-split seeds |",

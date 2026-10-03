@@ -83,6 +83,13 @@ class CoverageSummary:
             den += w
         return num / den if den else 0.0
 
+    def weighted_ci(self, weights: dict[str, float]) -> tuple[float, float]:
+        """95% percentile bootstrap CI of :meth:`weighted`, resampling techniques (fixed seed)."""
+        from .stats import weighted_bootstrap_ci
+
+        w = [weights.get(t.technique, weights.get(parent(t.technique), 0.0)) for t in self.techniques]
+        return weighted_bootstrap_ci([float(t.detected > 0) for t in self.techniques], w)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ruleset": self.ruleset, "rules": self.n_rules, "datasets": self.datasets,
