@@ -5,6 +5,14 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-03
+
+### Changed
+- Repository renamed to `rakshit-737/gauntlet-detection-coverage`. Repo, docs-site
+  (https://rakshit-737.github.io/gauntlet-detection-coverage/), badge, CITATION, mkdocs and
+  container image (`ghcr.io/rakshit-737/gauntlet-detection-coverage`) references updated.
+  Entries below refer to the old name `rakshit-737/gauntlet` and are kept as written.
+
 ## [1.1.1] - 2026-10-03
 
 ### Added

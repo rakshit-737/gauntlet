@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Intended use
-GAUNTLET is a **defensive** detection-engineering and purple-team training tool. The package replays recorded public telemetry (OTRF, Splunk attack_data) through Sigma rules and never executes techniques. Network access is limited to `scripts/download_data.py`, which fetches pinned, checksum-verified files from GitHub. The only execution of anything technique-like is the `live-telemetry` CI job, which runs an allowlist of benign read-only discovery commands (`whoami`, `id`, `uname -a`, ...) on an ephemeral GitHub-hosted runner ([ADR 0005](https://github.com/rakshit-737/gauntlet/blob/main/docs/adr/0005-benign-live-emulation.md)). There are no exploits or payloads.
+GAUNTLET is a **defensive** detection-engineering and purple-team training tool. The package replays recorded public telemetry (OTRF, Splunk attack_data) through Sigma rules and never executes techniques. Network access is limited to `scripts/download_data.py`, which fetches pinned, checksum-verified files from GitHub. The only execution of anything technique-like is the `live-telemetry` CI job, which runs an allowlist of benign read-only discovery commands (`whoami`, `id`, `uname -a`, ...) on an ephemeral GitHub-hosted runner ([ADR 0005](https://github.com/rakshit-737/gauntlet-detection-coverage/blob/main/docs/adr/0005-benign-live-emulation.md)). There are no exploits or payloads.
 
 Rules for contributions and any future emulation backend:
 - Emulation may run **only** inside an isolated lab range that you own, on an internal network with no egress.
@@ -14,7 +14,7 @@ Report issues privately via GitHub private vulnerability reporting ("Report a vu
 ## Supported versions
 | Version | Supported |
 |---|---|
-| 1.1.x (latest release: wheel, sdist and `ghcr.io/rakshit-737/gauntlet:1.1.1`) and `main` | yes |
+| 1.1.x (latest release: wheel, sdist and `ghcr.io/rakshit-737/gauntlet-detection-coverage:1.1.2`) and `main` | yes |
 | 1.0.x and older | no (the 1.0.0 wheel and image report 0% in `sim`; upgrade) |
 
 GAUNTLET is not published on PyPI; install from a release tag or a release wheel.

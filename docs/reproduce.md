@@ -2,7 +2,7 @@
 
 Every published number can be regenerated from pinned public data.
 
-**Source runs of the committed results.** `results/RESULTS.md`, `EXTENDED.md`, `SELFTEST.md`, `PUBLISHED.md`, their JSON files, the figures and the Navigator layers come from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet/actions/runs/37094883465) at commit `d501d40`. `results/LIVE.md` and `live.json` come from `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet/actions/runs/37092465944) at commit `82694b3`. Both were committed unedited from the runs' artefacts; each file names its run and commit.
+**Source runs of the committed results.** `results/RESULTS.md`, `EXTENDED.md`, `SELFTEST.md`, `PUBLISHED.md`, their JSON files, the figures and the Navigator layers come from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37094883465) at commit `d501d40`. `results/LIVE.md` and `live.json` come from `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37092465944) at commit `82694b3`. Both were committed unedited from the runs' artefacts; each file names its run and commit.
 
 | Step | Command | Where | Runtime (measured) |
 |---|---|---|---|
@@ -18,7 +18,7 @@ Every published number can be regenerated from pinned public data.
 | Check against the committed results | `python scripts/verify_results.py results out` | anywhere | seconds |
 | Live telemetry | `live-telemetry` workflow (GitHub Actions only) | ephemeral runner | about 1 min |
 
-The [`benchmark`](https://github.com/rakshit-737/gauntlet/actions/workflows/benchmark.yml) workflow (workflow_dispatch, ubuntu-24.04) runs exactly these steps into a fresh directory with `pipefail`, asserts that every expected file was written by that run, compares the fresh JSON with the committed JSON (`verify_results.py`, in the step summary) and uploads the directory as an artefact kept for 90 days.
+The [`benchmark`](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/workflows/benchmark.yml) workflow (workflow_dispatch, ubuntu-24.04) runs exactly these steps into a fresh directory with `pipefail`, asserts that every expected file was written by that run, compares the fresh JSON with the committed JSON (`verify_results.py`, in the step summary) and uploads the directory as an artefact kept for 90 days.
 
 === "bash"
 

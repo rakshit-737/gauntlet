@@ -22,7 +22,7 @@ gauntlet bench --out out                                     # OTRF benchmark
 
 Exact commands, expected outputs and runtimes for every published number are in [Reproduce](reproduce.md).
 
-Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged; captured in benchmark run 37094883465, full output in [`results/replay-ransomware-top15.txt`](https://github.com/rakshit-737/gauntlet/blob/main/results/replay-ransomware-top15.txt)):
+Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged; captured in benchmark run 37094883465, full output in [`results/replay-ransomware-top15.txt`](https://github.com/rakshit-737/gauntlet-detection-coverage/blob/main/results/replay-ransomware-top15.txt)):
 
 ```text
 Replaying 33 recordings for 15 prioritized techniques (profile 'ransomware', 18 groups) through sigma-core ...
@@ -47,6 +47,6 @@ Load `out/layer.json` or `results/navigator-*.json` in [ATT&CK Navigator](https:
 
 ## Docker
 
-The container image `ghcr.io/rakshit-737/gauntlet:1.1.1` is built from the v1.1.1 tag. Avoid the older `1.0.0` image: it resolves rules inside site-packages (`sim` reports 0%).
+The container image `ghcr.io/rakshit-737/gauntlet-detection-coverage:1.1.2` is built from the v1.1.2 tag. Avoid the older `1.0.0` image: it resolves rules inside site-packages (`sim` reports 0%).
 
 See [Reproduce](reproduce.md) for runtimes and expected outputs, and [Evaluation](evaluation.md) for what the numbers mean.

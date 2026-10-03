@@ -1,8 +1,8 @@
 site_name: GAUNTLET
 site_description: Threat-informed purple-team coverage scoring on real ATT&CK, Sigma and recorded attack telemetry
-site_url: https://rakshit-737.github.io/gauntlet/
-repo_url: https://github.com/rakshit-737/gauntlet
-repo_name: rakshit-737/gauntlet
+site_url: https://rakshit-737.github.io/gauntlet-detection-coverage/
+repo_url: https://github.com/rakshit-737/gauntlet-detection-coverage
+repo_name: rakshit-737/gauntlet-detection-coverage
 edit_uri: edit/main/docs/
 theme:
   name: material

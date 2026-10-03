@@ -37,7 +37,7 @@ def have_real_data(root: Path | None = None) -> bool:
     return sigma_zip(r).exists() and (r / "mordor" / "_metadata").is_dir()
 
 
-REPO_URL = "https://github.com/rakshit-737/gauntlet"
+REPO_URL = "https://github.com/rakshit-737/gauntlet-detection-coverage"
 
 
 def provenance() -> dict[str, str | None]:

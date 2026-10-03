@@ -4,7 +4,7 @@
 
 To our knowledge this is the first measured, interval-bounded gap between tag-claimed and replay-measured SigmaHQ coverage on public recordings plus live telemetry; [Virkud et al. (USENIX Security 2024)](https://www.usenix.org/conference/usenixsecurity24/presentation/virkud) argue from rule analysis that technique tags do not imply coverage of real threats.
 
-It also ranks techniques by what real ATT&CK groups do (CTI prioritization), turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data. Numbers come from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet/actions/runs/37094883465) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet/actions/runs/37092465944) ([Evaluation](evaluation.md)).
+It also ranks techniques by what real ATT&CK groups do (CTI prioritization), turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data. Numbers come from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37094883465) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37092465944) ([Evaluation](evaluation.md)).
 
 <div class="grid cards" markdown>
 
@@ -36,12 +36,12 @@ It also ranks techniques by what real ATT&CK groups do (CTI prioritization), tur
 
 ```bash
 python -m venv .venv && . .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.1"
+pip install "git+https://github.com/rakshit-737/gauntlet-detection-coverage@v1.1.2"
 gauntlet plan --profile ransomware --top 10       # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5
 ```
 
-GAUNTLET is not published on PyPI: install from the v1.1.1 tag or the release wheel. The name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Use v1.1.0 or later; the v1.0.0 wheel and image predate the rules-path and bench-output fixes.
+GAUNTLET is not published on PyPI: install from the v1.1.2 tag or the release wheel. The name `gauntlet` on PyPI belongs to an unrelated project, so do not run `pip install gauntlet`. Use v1.1.0 or later; the v1.0.0 wheel and image predate the rules-path and bench-output fixes.
 
 <div class="grid cards" markdown>
 

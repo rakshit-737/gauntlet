@@ -1,8 +1,8 @@
 # GAUNTLET
 
-[![ci](https://github.com/rakshit-737/gauntlet/actions/workflows/ci.yml/badge.svg)](https://github.com/rakshit-737/gauntlet/actions/workflows/ci.yml)
+[![ci](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/workflows/ci.yml/badge.svg)](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-[![docs](https://github.com/rakshit-737/gauntlet/actions/workflows/docs.yml/badge.svg)](https://rakshit-737.github.io/gauntlet/)
+[![docs](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/workflows/docs.yml/badge.svg)](https://rakshit-737.github.io/gauntlet-detection-coverage/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v19.2-red)
 ![Sigma](https://img.shields.io/badge/SigmaHQ-r2026--07--01-orange)
@@ -13,20 +13,20 @@ To our knowledge this is the first measured, interval-bounded gap between tag-cl
 
 It also ranks techniques by what real ATT&CK groups do, turns gaps into the cheapest rules to add, and gates CI on coverage regressions. It uses only public data.
 
-<p align="center"><a href="https://rakshit-737.github.io/gauntlet/demo/"><img src="docs/assets/demo.png" width="760" alt="GAUNTLET coverage explorer: per-tactic and per-technique coverage for SigmaHQ rule sets"></a></p>
+<p align="center"><a href="https://rakshit-737.github.io/gauntlet-detection-coverage/demo/"><img src="docs/assets/demo.png" width="760" alt="GAUNTLET coverage explorer: per-tactic and per-technique coverage for SigmaHQ rule sets"></a></p>
 
-**Docs:** <https://rakshit-737.github.io/gauntlet/>: [How it works](https://rakshit-737.github.io/gauntlet/how-it-works/), [Evaluation](https://rakshit-737.github.io/gauntlet/evaluation/), [Reproduce](https://rakshit-737.github.io/gauntlet/reproduce/) and the [live coverage explorer](https://rakshit-737.github.io/gauntlet/demo/).
+**Docs:** <https://rakshit-737.github.io/gauntlet-detection-coverage/>: [How it works](https://rakshit-737.github.io/gauntlet-detection-coverage/how-it-works/), [Evaluation](https://rakshit-737.github.io/gauntlet-detection-coverage/evaluation/), [Reproduce](https://rakshit-737.github.io/gauntlet-detection-coverage/reproduce/) and the [live coverage explorer](https://rakshit-737.github.io/gauntlet-detection-coverage/demo/).
 
 ## Try it in 60 seconds
 
 ```bash
 python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install "git+https://github.com/rakshit-737/gauntlet@v1.1.1"
+pip install "git+https://github.com/rakshit-737/gauntlet-detection-coverage@v1.1.2"
 gauntlet plan --profile ransomware --top 10          # CTI-prioritized emulation plan (offline)
 gauntlet predict --observed T1566.001,T1059.001 -k 5 # likely next techniques
 ```
 
-GAUNTLET is **not published on PyPI**: install from the v1.1.1 tag (above) or the wheel attached to the [v1.1.1 release](https://github.com/rakshit-737/gauntlet/releases/tag/v1.1.1). The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`. This distribution is named `gauntlet-coverage`; the import package and command stay `gauntlet`.
+GAUNTLET is **not published on PyPI**: install from the v1.1.2 tag (above) or the wheel attached to the [v1.1.2 release](https://github.com/rakshit-737/gauntlet-detection-coverage/releases/tag/v1.1.2). The PyPI name `gauntlet` belongs to an unrelated project, so never run `pip install gauntlet`. This distribution is named `gauntlet-coverage`; the import package and command stay `gauntlet`.
 
 > Lab-only. The `gauntlet` package **never executes attack techniques**: it reads recorded logs and prints
 > Atomic Red Team test names marked DRY RUN. One CI job runs an allowlist of benign, read-only discovery
@@ -35,7 +35,7 @@ GAUNTLET is **not published on PyPI**: install from the v1.1.1 tag (above) or th
 
 ## Headline results
 
-Every number below is in a committed file under [`results/`](results/), copied unedited from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet/actions/runs/37094883465) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet/actions/runs/37092465944) on clean ubuntu-24.04 runners; each file names its run. Bracket types are labelled where they appear: Wilson intervals for proportions (computed from the raw counts and rounded once), percentile bootstrap intervals for weighted coverage and for strategy comparisons.
+Every number below is in a committed file under [`results/`](results/), copied unedited from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37094883465) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37092465944) on clean ubuntu-24.04 runners; each file names its run. Bracket types are labelled where they appear: Wilson intervals for proportions (computed from the raw counts and rounded once), percentile bootstrap intervals for weighted coverage and for strategy comparisons.
 
 **1. Claimed vs measured coverage (the novel result).** *Claimed* means at least one rule is tagged with the technique's family; *measured* means such a rule actually fired on a recording of it. Technique coverage counts a technique as covered if any of its recordings is detected; *fully detected* requires all of them. SigmaHQ release package (`sigma-all`), 95% Wilson intervals ([`EXTENDED.md`](results/EXTENDED.md)):
 
@@ -154,7 +154,7 @@ gauntlet replay --profile ransomware --top 15 --ruleset sigma-core \
 gauntlet bench --out out                                     # OTRF benchmark
 ```
 
-Exact commands, expected outputs and runtimes for every published number are in [Reproduce](https://rakshit-737.github.io/gauntlet/reproduce/).
+Exact commands, expected outputs and runtimes for every published number are in [Reproduce](https://rakshit-737.github.io/gauntlet-detection-coverage/reproduce/).
 
 Example: `replay --profile ransomware --top 15 --ruleset sigma-core` (abridged; captured in benchmark run 37094883465, full output in [`results/replay-ransomware-top15.txt`](results/replay-ransomware-top15.txt)):
 
@@ -195,7 +195,7 @@ Details, caveats and citations are in [`docs/DATASETS.md`](docs/DATASETS.md). No
 ## Reproducibility
 
 - Every source is pinned (git commit or release tag) and verified against [`scripts/checksums.sha256`](scripts/checksums.sha256), or against git-LFS sha256 oids for Splunk.
-- The committed `results/` are copied unedited from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet/actions/runs/37094883465) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet/actions/runs/37092465944), and each file names the run and commit that produced it. The benchmark job runs with `pipefail`, writes into a fresh directory and fails unless every expected file was written by that run. On its 4-core runner `bench` takes about 3 minutes cold and `extended` about 4.
+- The committed `results/` are copied unedited from `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37094883465) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37092465944), and each file names the run and commit that produced it. The benchmark job runs with `pipefail`, writes into a fresh directory and fails unless every expected file was written by that run. On its 4-core runner `bench` takes about 3 minutes cold and `extended` about 4.
 - [`scripts/verify_results.py`](scripts/verify_results.py) compares a reproduction with `results/` field by field (ignoring only timing and provenance) and exits 1 on any difference. Random baselines and bootstraps use fixed seeds, and the replay cache is keyed by a fingerprint of the rules and evaluator code.
 - CI runs ruff, the offline tests on Python 3.11-3.14, the replay tests against the installed wheel, sdist and container smoke tests, pip-audit and gitleaks. The `@pytest.mark.realdata` tests run locally once the data is present.
 
@@ -232,7 +232,7 @@ More detail: [docs/limitations.md](docs/limitations.md).
 
 - [x] Real CTI prevalence and profiles; Sigma scoring on real telemetry; Navigator export, cheapest wins, telemetry ablation
 - [x] CTI vs breadth-first (leave-one-group-out); co-occurrence prediction; an interval or exact test for every reported statistic
-- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0, v1.1.0, v1.1.1)
+- [x] Docs site, coverage explorer, container image, tagged releases (v1.0.0, v1.1.0, v1.1.1, v1.1.2)
 - [x] OTRF compound and Splunk attack_data sources; claimed vs measured; held-out rule selection
 - [x] Live auditd telemetry with event-level labels (benign allowlist, ADR 0005); published-number comparison
 - [x] Evaluator self-test on SigmaHQ regression samples

@@ -1,6 +1,6 @@
 # Evaluation
 
-All numbers on this page come from committed files in [`results/`](https://github.com/rakshit-737/gauntlet/tree/main/results), included here verbatim. They were produced by `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet/actions/runs/37094883465) (a cold run on a clean ubuntu-24.04 runner) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet/actions/runs/37092465944); every generated file names its run and commit in its first lines.
+All numbers on this page come from committed files in [`results/`](https://github.com/rakshit-737/gauntlet-detection-coverage/tree/main/results), included here verbatim. They were produced by `benchmark` run [37094883465](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37094883465) (a cold run on a clean ubuntu-24.04 runner) and `live-telemetry` run [37092465944](https://github.com/rakshit-737/gauntlet-detection-coverage/actions/runs/37092465944); every generated file names its run and commit in its first lines.
 
 ## Methodology
 
