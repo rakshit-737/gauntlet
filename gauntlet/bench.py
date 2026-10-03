@@ -58,6 +58,7 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
           f"{len(datasets)} recordings; ART tests for {len(art)} techniques")
 
     report: dict[str, Any] = {
+        **paths.provenance(),
         "attack_version": kb.version, "sigma_release": paths.SIGMA_TAG,
         "recordings": len(datasets),
         "skipped_recordings": sorted(d.id for d in catalog if not d.available),
@@ -80,13 +81,12 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         s = coverage.score(name, res, rules, kb)
         summaries[name] = s
         d = s.to_dict()
-        d["exact_id_technique_coverage"] = round(
-            coverage.score(name, res, rules, kb, exact=True).technique_coverage, 4)
+        d["exact_id_technique_coverage"] = coverage.score(name, res, rules, kb, exact=True).technique_coverage
         d["seconds"] = round(time.time() - t1, 1)
         n_cov = sum(t.detected > 0 for t in s.techniques)
         n_full = sum(t.outcome == "detected" for t in s.techniques)
         n_exact = sum(t.detected > 0 for t in coverage.score(name, res, rules, kb, exact=True).techniques)
-        d["fully_detected_coverage"] = round(n_full / max(len(s.techniques), 1), 4)
+        d["fully_detected_coverage"] = n_full / max(len(s.techniques), 1)
         d["outcomes"] = {"detected": n_full, "partial": n_cov - n_full, "missed": len(s.techniques) - n_cov}
         d["ci95"] = {"technique_coverage": list(stats.wilson(n_cov, len(s.techniques))),
                      "fully_detected_coverage": list(stats.wilson(n_full, len(s.techniques))),
@@ -98,12 +98,16 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
             narrow = {k: v for k, v in rules.items() if not v.cites(LEAKAGE_PATTERN_NARROW)}
             sn = coverage.score(name, res, narrow, kb)
             n_lc = sum(t.detected > 0 for t in sc.techniques)
+            # nested: removing rules can only lose techniques, so the drop is a proportion of techniques
+            lost = n_cov - n_lc
             d["leakage_controlled"] = {"rules_removed": len(rules) - len(clean),
-                                       "technique_coverage": round(sc.technique_coverage, 4),
+                                       "technique_coverage": sc.technique_coverage,
                                        "technique_coverage_ci95": list(stats.wilson(n_lc, len(sc.techniques))),
-                                       "dataset_recall": round(sc.dataset_recall, 4),
+                                       "techniques_lost": lost,
+                                       "drop_ci95": list(stats.wilson(lost, len(s.techniques))),
+                                       "dataset_recall": sc.dataset_recall,
                                        "narrow_pattern_rules_removed": len(rules) - len(narrow),
-                                       "narrow_pattern_technique_coverage": round(sn.technique_coverage, 4)}
+                                       "narrow_pattern_technique_coverage": sn.technique_coverage}
         report.setdefault("detection", {})[name] = {k: v for k, v in d.items() if k != "results"}
         (out / f"coverage-{name}.json").write_text(json.dumps(d, indent=1), encoding="utf-8")
         (out / f"navigator-{name}.json").write_text(
@@ -127,7 +131,7 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         groups = prioritize.profile_groups(kb, p)
         rel = prioritize.relevance(groups)
         profiles[p] = {"groups": len(groups), "example_groups": [g.name for g in groups[:8]],
-                       "weighted_coverage": {n: round(s.weighted(rel), 4) for n, s in summaries.items()}}
+                       "weighted_coverage": {n: s.weighted(rel) for n, s in summaries.items()}}
     report["profiles"] = profiles
 
     main = "sigma-core" if "sigma-core" in summaries else next(iter(summaries))
@@ -139,14 +143,19 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         report["cheapest_wins_all"] = coverage.greedy_rule_selection(
             replays["sigma-all"], rule_objs["sigma-all"], rel_r, top=10, kb=kb)
     report["channel_ablation"] = coverage.channel_ablation(replays[main], rule_objs[main], CHANNELS, kb)
-    for a in report["channel_ablation"]:  # every lost technique is a discordant pair, none gained
-        a["mcnemar_p"] = stats.mcnemar_exact(a["techniques_lost"], 0)
+    n_main = len(s_main.techniques)
+    for a in report["channel_ablation"]:
+        # nested (dropping a channel can only lose detections): report the loss as a proportion of
+        # techniques with a Wilson interval; a McNemar test would only restate the count
+        a["lost_ci95"] = list(stats.wilson(a["techniques_lost"], n_main))
     if "sigma-core" in summaries and "sigma-all" in summaries:
         c = {t.technique: t.detected > 0 for t in summaries["sigma-core"].techniques}
         al = {t.technique: t.detected > 0 for t in summaries["sigma-all"].techniques}
         gained = sum(al[t] and not c.get(t, False) for t in al)
         lost = sum(c[t] and not al.get(t, False) for t in c)
-        report["core_vs_all"] = {"gained": gained, "lost": lost, "mcnemar_p": stats.mcnemar_exact(gained, lost)}
+        # sigma-core is a filter of sigma-all, so lost is 0 by construction
+        report["core_vs_all"] = {"gained": gained, "lost": lost, "techniques": len(al),
+                                 "gain_ci95": list(stats.wilson(gained, len(al)))}
 
     # before/after sprint: baseline hand-written rules + the top-10 cheapest Sigma rules
     if "legacy" in replays and "sigma-all" in replays:
@@ -160,10 +169,10 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
         after = coverage.score("legacy+top10", merged, rules, kb)
         report["sprint"] = {"rules": "legacy + top-10 greedy cheapest-win rules from sigma-all",
                             "in_sample": True,
-                            "before": round(summaries["legacy"].technique_coverage, 4),
-                            "after_top10_sigma_rules": round(after.technique_coverage, 4),
-                            "before_weighted_ransomware": round(summaries["legacy"].weighted(rel_r), 4),
-                            "after_weighted_ransomware": round(after.weighted(rel_r), 4)}
+                            "before": summaries["legacy"].technique_coverage,
+                            "after_top10_sigma_rules": after.technique_coverage,
+                            "before_weighted_ransomware": summaries["legacy"].weighted(rel_r),
+                            "after_weighted_ransomware": after.weighted(rel_r)}
 
     # ---------------------------------------------------------------- prioritization
     timings = {"detection": round(time.time() - t0, 1)}
@@ -195,7 +204,7 @@ def run(root: Path | None = None, out: Path | None = None, workers: int | None =
 
 
 def _pct(x: float) -> str:
-    return f"{100 * x:.1f}%"
+    return f"{stats.pct(x)}%"
 
 
 def _p(p: float | None) -> str:
@@ -205,7 +214,8 @@ def _p(p: float | None) -> str:
 
 
 def _ci(ci) -> str:
-    return f" [{100 * ci[0]:.1f}, {100 * ci[1]:.1f}]" if ci else ""
+    """Wilson interval from unrounded bounds, rounded once to 0.1 point."""
+    return stats.fmt_ci(ci)
 
 
 def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
@@ -214,9 +224,10 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
          f"{r['recordings']} OTRF Security-Datasets Windows recordings covering "
          f"{r['recorded_techniques']} techniques. Generated by `python -m gauntlet bench`"
          + (f"; skipped (file missing or unreadable): {', '.join(r['skipped_recordings'])}"
-            if r.get("skipped_recordings") else "") + ".", "",
+            if r.get("skipped_recordings") else "") + ". " + paths.provenance_line(r), "",
          "## Detection coverage on real recorded attack telemetry", "",
-         f"Brackets are 95% Wilson intervals ({r['recorded_techniques']} techniques / {r['recordings']} "
+         f"Brackets are 95% Wilson intervals, computed from the raw counts and rounded once "
+         f"({r['recorded_techniques']} techniques / {r['recordings']} "
          "recordings are small samples; recordings are treated as independent). *Technique coverage* = at "
          "least one recording of the technique has an on-target alert (partially detected techniques count); "
          "*fully detected* = every recording of it does.", "",
@@ -237,13 +248,18 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
                  f"| {d['off_target_alerts_per_10k_events']} |")
     if "core_vs_all" in r:
         c = r["core_vs_all"]
-        L += ["", f"sigma-core to sigma-all: {c['gained']} techniques gained, {c['lost']} lost "
-              f"(exact McNemar p = {c['mcnemar_p']:.4f})."]
+        L += ["", f"sigma-core to sigma-all: {c['gained']} of {c['techniques']} techniques gained "
+              f"(+{stats.pct(c['gained'] / c['techniques'])} points, 95% Wilson{_ci(c['gain_ci95'])}), "
+              f"{c['lost']} lost. sigma-core is a filter of sigma-all, so no technique can be lost and a "
+              "McNemar test would only restate the count; the interval on the gain is reported instead."]
     lc = r["detection"].get("sigma-core", {}).get("leakage_controlled")
     if lc:
+        n_t = r["recorded_techniques"]
         L += ["", "Leakage control removes rules whose references or description cite OTRF / Security-Datasets / "
-              "Threat Hunter Playbook or the OTRF co-founder's blog and handles. With the narrower v1.0 pattern "
-              f"(OTRF names only) sigma-core coverage would be {_pct(lc['narrow_pattern_technique_coverage'])}."]
+              "Threat Hunter Playbook or the OTRF co-founder's blog and handles. For sigma-core it loses "
+              f"{lc['techniques_lost']} of {n_t} techniques (-{stats.pct(lc['techniques_lost'] / n_t)} points, "
+              f"95% Wilson{_ci(lc['drop_ci95'])}). With the narrower v1.0 pattern (OTRF names only) sigma-core "
+              f"coverage would be {_pct(lc['narrow_pattern_technique_coverage'])}."]
     L += ["", "## Threat-weighted coverage per CTI profile", "",
           "| Profile | ATT&CK groups | " + " | ".join(r["detection"]) + " |",
           "|---|---:|" + "---:|" * len(r["detection"])]
@@ -267,10 +283,14 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
             L.append(f"| {i} | {w['rule']} | {', '.join(w['new_techniques'])} "
                      f"| {_pct(w['cumulative_weighted_coverage'])} |")
     L += ["", "## Telemetry ablation (sigma-core): techniques lost if a channel is not collected", "",
-          "| Channel | Techniques lost | Coverage without | Exact McNemar p |", "|---|---:|---:|---:|"]
+          "Dropping a channel can only lose detections, so the loss is reported as points of technique "
+          "coverage with a 95% Wilson interval on lost / recorded techniques.", "",
+          "| Channel | Techniques lost | Coverage lost, points [95% Wilson] | Coverage without |",
+          "|---|---:|---:|---:|"]
+    n_t = r["recorded_techniques"]
     for a in r["channel_ablation"]:
-        L.append(f"| {a['channel']} | {a['techniques_lost']} | {_pct(a['coverage_without'])} "
-                 f"| {a.get('mcnemar_p', 1.0):.3g} |")
+        L.append(f"| {a['channel']} | {a['techniques_lost']} | {stats.pct(a['techniques_lost'] / n_t)}"
+                 f"{_ci(a.get('lost_ci95'))} | {_pct(a['coverage_without'])} |")
     L += ["", "## Per-tactic coverage (sigma-core)", "", "| Tactic | Covered / recorded techniques |", "|---|---:|"]
     for k, (a, b) in main.by_tactic().items():
         L.append(f"| {k} | {a}/{b} |")
@@ -283,9 +303,9 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
         for s, m in d["strategies"].items():
             L.append(f"| {p} (n={d['groups_evaluated']}) | {s} | {m['recall@10']:.3f} | {m['recall@25']:.3f} "
                      f"| {m['recall@50']:.3f} | {m['steps_to_50%']:.1f} | {m['steps_to_80%']:.1f} | {m['auc']:.3f} |")
-    L += ["", "Paired comparison over held-out groups (mean difference, 95% bootstrap CI and exact sign-test p; "
-          "negative steps = CTI needs fewer emulations). With fewer than 10 held-out groups the bootstrap CI is "
-          "not reported; the per-group differences are shown instead.", "",
+    L += ["", "Paired comparison over held-out groups (mean difference, 95% paired percentile bootstrap CI and "
+          "exact sign-test p; negative steps = the first strategy needs fewer emulations). With fewer than 10 "
+          "held-out groups the bootstrap CI is not reported; the per-group differences are shown instead.", "",
           "| Profile | Comparison | Δ steps to 80% | sign p | Δ AUC |", "|---|---|---:|---:|---:|"]
     for p, d in r["prioritization"].items():
         for c, v in d.get("paired", {}).items():
@@ -304,14 +324,18 @@ def render_markdown(r: dict[str, Any], main: coverage.CoverageSummary) -> str:
         for m, v in d["models"].items():
             L.append(f"| {lvl} (n={d['groups_evaluated']}) | {m} | {v['recall@5']:.3f} | {v['recall@10']:.3f} "
                      f"| {v['recall@20']:.3f} | {v['mrr']:.3f} |")
-    L += ["", "| Level | co-occurrence − popularity recall@10 (95% CI) | recall@10 mean ± sd over 5 hide-split seeds |",
-          "|---|---:|---|"]
+    L += ["", "| Level | co-occurrence − popularity recall@10 (95% paired bootstrap CI) "
+          "| co-occurrence − popularity MRR (95% paired bootstrap CI) "
+          "| recall@10 mean ± sd over 5 hide-split seeds |",
+          "|---|---:|---:|---|"]
     for lvl, d in r["prediction"].items():
-        pr, sd = d.get("paired_recall@10"), d.get("across_seeds", {})
+        pr, pm, sd = d.get("paired_recall@10"), d.get("paired_mrr"), d.get("across_seeds", {})
         if pr:
             seeds_s = "; ".join(f"{m} {v['recall@10_mean']:.3f} ± {v['recall@10_sd']:.3f}"
                                 for m, v in sd.items() if isinstance(v, dict))
-            L.append(f"| {lvl} | {pr['mean_diff']:+.3f} [{pr['ci95'][0]:+.3f}, {pr['ci95'][1]:+.3f}] | {seeds_s} |")
+            pm_s = f"{pm['mean_diff']:+.3f} [{pm['ci95'][0]:+.3f}, {pm['ci95'][1]:+.3f}]" if pm else "n/a"
+            L.append(f"| {lvl} | {pr['mean_diff']:+.3f} [{pr['ci95'][0]:+.3f}, {pr['ci95'][1]:+.3f}] "
+                     f"| {pm_s} | {seeds_s} |")
     if "sigma_parse" in r:
         sp = r["sigma_parse"]
         L += ["", "## Sigma evaluator support", "",
