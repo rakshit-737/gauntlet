@@ -28,6 +28,14 @@ class ReplayResult:
     channels: dict[str, int]
     # rule id -> channel -> number of matching events
     hits: dict[str, dict[str, int]] = field(default_factory=dict)
+    # "channel|EventID" -> number of events (what a rule's (channel, EventID) target could see)
+    pairs: dict[str, int] = field(default_factory=dict)
+
+    def has_target(self, channel: str, eid: int | None) -> bool:
+        """Whether the recording contains events a rule targeting ``(channel, eid)`` would be tested on."""
+        if eid is None:
+            return channel in self.channels
+        return f"{channel}|{eid}" in self.pairs
 
     def fired(self, drop_channels: Iterable[str] = ()) -> set[str]:
         drop = {c.lower() for c in drop_channels}
@@ -35,11 +43,12 @@ class ReplayResult:
 
     def to_json(self) -> dict[str, Any]:
         return {"dataset": self.dataset_id, "techniques": list(self.techniques),
-                "n_events": self.n_events, "channels": self.channels, "hits": self.hits}
+                "n_events": self.n_events, "channels": self.channels, "hits": self.hits, "pairs": self.pairs}
 
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> ReplayResult:
-        return cls(d["dataset"], tuple(d["techniques"]), d["n_events"], d["channels"], d["hits"])
+        return cls(d["dataset"], tuple(d["techniques"]), d["n_events"], d["channels"], d["hits"],
+                   d.get("pairs", {}))
 
 
 class RuleIndex:
@@ -56,7 +65,12 @@ class RuleIndex:
         b = self.by_target.get((channel, None), [])
         return a + b if b else a
 
-    def evaluate(self, events: Iterable[dict[str, Any]]) -> tuple[int, Counter, dict[str, dict[str, int]]]:
+    def evaluate(self, events: Iterable[dict[str, Any]], pairs: Counter | None = None,
+                 ) -> tuple[int, Counter, dict[str, dict[str, int]]]:
+        """Evaluate every event; returns (events, per-channel counts, rule -> channel -> hits).
+
+        If ``pairs`` is given it is updated with per ``"channel|EventID"`` event counts.
+        """
         n = 0
         chans: Counter = Counter()
         hits: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -64,6 +78,8 @@ class RuleIndex:
             n += 1
             ch, eid, rec = mordor.normalize(raw)
             chans[ch] += 1
+            if pairs is not None:
+                pairs[f"{ch}|{eid}"] += 1
             cand = self.candidates(ch, eid)
             if not cand:
                 continue
@@ -80,18 +96,18 @@ class RuleIndex:
 
 
 def replay_dataset(index: RuleIndex, ds: mordor.Dataset) -> ReplayResult:
-    total, chans, hits = 0, Counter(), {}
+    total, chans, hits, pairs = 0, Counter(), {}, Counter()
     for f in ds.files:
         if not f.exists():
             continue
-        n, c, h = index.evaluate(mordor.iter_events(f))
+        n, c, h = index.evaluate(mordor.iter_events(f), pairs)
         total += n
         chans.update(c)
         for rid, per in h.items():
             dst = hits.setdefault(rid, {})
             for ch, k in per.items():
                 dst[ch] = dst.get(ch, 0) + k
-    return ReplayResult(ds.id, ds.techniques, total, dict(chans), hits)
+    return ReplayResult(ds.id, ds.techniques, total, dict(chans), hits, dict(pairs))
 
 
 # ---------------------------------------------------------------- rule-set specs

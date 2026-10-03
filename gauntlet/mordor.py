@@ -131,8 +131,17 @@ def load_compound(root: str | Path) -> list[Dataset]:
     return out
 
 
+LINUX_SOURCETYPES = frozenset({"auditd", "sysmon:linux"})
+
+
 def load_splunk(root: str | Path, manifest: str | Path | None = None) -> list[Dataset]:
-    """Splunk attack_data recordings listed in the committed manifest (recording-level labels)."""
+    """Splunk attack_data recordings listed in the committed manifest (recording-level labels).
+
+    Files are routed by sourcetype: Linux (auditd, Sysmon for Linux) files form the Linux
+    recording and Windows XML files the Windows one, so each is scored with its own platform's
+    rules. A manifest entry with files of both kinds becomes two datasets, ``<id>@linux`` and
+    ``<id>@windows``, with the same technique labels.
+    """
     import json
 
     root = Path(root)
@@ -143,11 +152,25 @@ def load_splunk(root: str | Path, manifest: str | Path | None = None) -> list[Da
     out = []
     for r in man["recordings"]:
         techs = tuple(sorted({t for t in r["techniques"] if t[1:].replace(".", "").isdigit()}))
-        files = tuple(root / "splunk" / f["path"].split("datasets/", 1)[1] for f in r["files"])
-        st = {f["sourcetype"] for f in r["files"]}
-        platform = "linux" if st & {"auditd", "sysmon:linux"} else "windows"
-        out.append(Dataset(r["id"], r["title"], techs, files, platform, source="splunk"))
+        parts: dict[str, list[Path]] = {}
+        for f in r["files"]:
+            plat = "linux" if f["sourcetype"] in LINUX_SOURCETYPES else "windows"
+            parts.setdefault(plat, []).append(root / "splunk" / f["path"].split("datasets/", 1)[1])
+        for plat, files in sorted(parts.items()):
+            rid = r["id"] if len(parts) == 1 else f"{r['id']}@{plat}"
+            out.append(Dataset(rid, r["title"], techs, tuple(files), plat, source="splunk"))
     return out
+
+
+def splunk_sourcetypes(manifest: str | Path | None = None) -> dict[str, str]:
+    """Manifest file path (relative to ``splunk/``) -> Splunk sourcetype."""
+    import json
+
+    mp = Path(manifest) if manifest else paths_manifest()
+    if not mp.exists():
+        return {}
+    man = json.loads(mp.read_text(encoding="utf-8"))
+    return {f["path"].split("datasets/", 1)[1]: f["sourcetype"] for r in man["recordings"] for f in r["files"]}
 
 
 def paths_manifest() -> Path:
