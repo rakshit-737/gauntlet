@@ -289,7 +289,7 @@ def cmd_compare(a) -> int:
         print(f"missing {pub}; run scripts/download_data.py --only published", file=sys.stderr)
         return 1
     published.run(pub / "ctid-techniques.json", pub / "redgap-coverage.json", a.results,
-                  live_path=a.results / "live.json", extended_path=a.results / "extended.json")
+                  live_path=a.live or a.results / "live.json", extended_path=a.results / "extended.json")
     print(f"-> {a.results / 'PUBLISHED.md'}")
     return 0
 
@@ -377,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--out", type=Path, default=Path("live-out"), help="output directory")
     pc = sub.add_parser("compare", help="compare measured coverage with published numbers (CTID, RedGap)")
     pc.add_argument("--results", type=Path, default=Path("results"), help="results directory to read and write")
+    pc.add_argument("--live", type=Path, help="live.json from the live-telemetry run (default: <results>/live.json)")
     pt = sub.add_parser("selftest", help="evaluator fidelity: SigmaHQ regression samples through their own rules")
     pt.add_argument("--sigma-checkout", type=Path, required=True,
                     help=f"SigmaHQ checkout of {paths.SIGMA_TAG} (needs regression_data/)")

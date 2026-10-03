@@ -271,3 +271,17 @@ def test_cli_rejects_unknown_inputs(capsys):
     assert cli.main(["predict", "--observed", "T9999"]) == 1
     assert cli.main(["predict", "--observed", "T9999,T1059.001", "-k", "2"]) == 0
     assert "unknown ATT&CK technique id(s) T9999" in capsys.readouterr().err
+
+
+def test_verify_results_ignores_timing_and_provenance(tmp_path):
+    vr = _load_script("verify_results")
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    base = {"run_id": "1", "runtime_seconds": 5, "detection": {"x": {"technique_coverage": 0.8, "seconds": 1}}}
+    (a / "results.json").write_text(json.dumps(base))
+    (b / "results.json").write_text(json.dumps({**base, "run_id": "2", "runtime_seconds": 9}))
+    assert vr.main([str(a), str(b)]) == 0
+    (b / "results.json").write_text(json.dumps({**base, "detection": {"x": {"technique_coverage": 0.7}}}))
+    assert vr.main([str(a), str(b)]) == 1
+    assert vr.diff([1, 2], [1, 2, 3]) == [": list length 2 != 3"]
