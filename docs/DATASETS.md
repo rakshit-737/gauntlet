@@ -19,7 +19,7 @@ Nothing below is committed to git except the small derived files listed at the e
 
 ## Splunk attack_data selection
 
-The manifest keeps every recording under `datasets/attack_techniques/` whose files are Windows XML event logs (`XmlWinEventLog*`), Sysmon for Linux or auditd, **all of at most 2 MB**, with a `mitre_technique` label. It covers 1,236 YAML files at the pinned commit, of which 552 recordings qualify. Each file is verified against its git-LFS sha256 oid. The size cap biases the selection towards short recordings. The labels come from the dataset YAML and apply to the whole recording. Splunk's Linux auditd extracts are pre-filtered and usually contain no `EXECVE` records, which limits what process-creation rules can see.
+The manifest keeps every recording under `datasets/attack_techniques/` whose files are Windows XML event logs (`XmlWinEventLog*`), Sysmon for Linux or auditd, **all of at most 2 MB**, with a `mitre_technique` label. It covers 1,236 YAML files at the pinned commit, of which 552 recordings qualify. Each file is verified against its git-LFS sha256 oid. The size cap biases the selection towards short recordings. The labels come from the dataset YAML and apply to the whole recording. Files are routed by sourcetype: 16 manifest entries mix Linux and Windows files, and each part is scored with its own platform's rules (`<id>@linux`, `<id>@windows`). Splunk's Linux auditd extracts are pre-filtered: none of the 8 auditd recordings of the live-job techniques contains an `EXECVE` record (see `results/LIVE.md`), which limits what process-creation rules can see.
 
 ## OTRF Security-Datasets details
 
@@ -48,6 +48,12 @@ The manifest keeps every recording under `datasets/attack_techniques/` whose fil
 - Red Canary. *Atomic Red Team*. <https://github.com/redcanaryco/atomic-red-team>
 - Splunk Threat Research Team. *attack_data*. <https://github.com/splunk/attack_data>
 - Center for Threat-Informed Defense. *Top ATT&CK Techniques*. <https://github.com/center-for-threat-informed-defense/top-attack-techniques>
+- befnoz. *RedGap*: benign Linux lab and Sigma silent-rule report; `docs/benchmarks/coverage.json` at commit `a9bcbf2c`. <https://github.com/befnoz/redgap>
+
+Related research (not datasets, cited for the claim GAUNTLET tests):
+
+- Virkud, A., Inam, M. A., Riddle, A., Liu, J., Wang, G. and Bates, A. *How does Endpoint Detection use the MITRE ATT&CK Framework?* 33rd USENIX Security Symposium, 2024. <https://www.usenix.org/conference/usenixsecurity24/presentation/virkud>
+- Uetz, R., Herzog, M., Hackländer, L., Schwarz, S. and Henze, M. *You Cannot Escape Me: Detecting Evasions of SIEM Rules in Enterprise Networks.* 33rd USENIX Security Symposium, 2024. <https://arxiv.org/abs/2311.10197>
 
 ## Derived files committed to the repo
 
@@ -55,6 +61,6 @@ The manifest keeps every recording under `datasets/attack_techniques/` whose fil
 |---|---|---:|
 | `gauntlet/data/attack_kb.json` | ATT&CK v19.2 (names, tactics, platforms, group/software technique sets, 3-sentence group descriptions) | < 1 MB |
 | `gauntlet/data/art_windows.json` | ART Windows index (test names, GUIDs, executor) | ~160 KB |
-| `results/*.json`, `results/*.md`, `results/*.png` | benchmark outputs | small |
+| `results/*.json`, `results/*.md`, `results/*.png` | `benchmark` and `live-telemetry` workflow artefacts, committed unedited (each file names its run id) | small |
 
 Regenerate the first two with `python -m gauntlet kb` after downloading.

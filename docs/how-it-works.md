@@ -32,9 +32,9 @@ Leave-one-group-out testing shows that this ordering reaches 80% of a held-out a
 
 | Source | What | Labels |
 |---|---|---|
-| OTRF atomic | 98 Windows recordings, one technique each | per recording |
+| OTRF atomic | 98 Windows recordings; all but two are labelled with one technique (the others carry 2 and 4) | per recording |
 | OTRF compound | 7 multi-technique LSASS campaigns | per recording |
-| Splunk attack_data | 552 Windows (XML) and Linux (Sysmon, auditd) recordings | per recording |
+| Splunk attack_data | 552 recordings with Windows XML and Linux (Sysmon, auditd) files; each file is scored with its platform's rules | per recording |
 | Live auditd (CI) | allowlisted benign discovery commands on a GitHub runner | **per event** (PID-matched) |
 
 `formats.py` parses JSON lines, XML event lines and raw auditd. It merges `SYSCALL` + `EXECVE` + `CWD` records into process-creation events so that Linux `process_creation` rules can run on auditd.
