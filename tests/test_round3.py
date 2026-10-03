@@ -112,6 +112,37 @@ def test_fetcher_refuses_path_escape(tmp_path):
         f.fetch("https://example.invalid/x", "../evil.txt")
 
 
+def test_fetcher_records_av_blocked_part_and_continues(tmp_path, monkeypatch):
+    dl = _load_script("download_data")
+    payload = b"recorded events"
+
+    def fake_stream(url, dest):
+        dest.write_bytes(payload)
+
+    real = dl._sha256
+
+    def fake_sha(p, retries=10):
+        if str(p).endswith(".part") and "blocked" in str(p):
+            raise OSError(22, "Invalid argument")  # what Defender produces on Windows
+        return real(p, retries)
+
+    monkeypatch.setattr(dl, "_stream", fake_stream)
+    monkeypatch.setattr(dl, "_sha256", fake_sha)
+    import hashlib
+
+    digest = hashlib.sha256(payload).hexdigest()
+    f = dl.Fetcher(tmp_path, {"mordor/blocked.zip": digest, "mordor/ok.zip": digest})
+    f.fetch("https://example.invalid/a", "mordor/blocked.zip")
+    f.fetch("https://example.invalid/b", "mordor/ok.zip")  # later sources are still fetched
+    assert f.unreadable == ["mordor/blocked.zip"] and not f.bad
+    assert (tmp_path / "mordor" / "ok.zip").read_bytes() == payload
+    assert not (tmp_path / "mordor" / "blocked.zip.part").exists()
+    assert json.loads((tmp_path / ".av-skipped.json").read_text()) == ["mordor/blocked.zip"]
+    g = dl.Fetcher(tmp_path, {})  # a re-run does not fetch it again
+    monkeypatch.setattr(dl, "_stream", lambda *a: pytest.fail("re-fetched a skipped file"))
+    g.fetch("https://example.invalid/a", "mordor/blocked.zip")
+
+
 def test_published_comparisons():
     from gauntlet import published
 

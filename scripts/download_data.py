@@ -152,6 +152,22 @@ class Fetcher:
             raise ValueError(f"refusing path outside the data dir: {rel!r}")
         return dest
 
+    def _mark_unreadable(self, rel: str, err: OSError, part: Path | None = None) -> None:
+        """Record a file local AV blocked (e.g. Defender on attack-tool strings) and keep going."""
+        if part is not None:
+            try:
+                part.unlink()
+            except OSError:
+                pass  # AV may hold or have removed it already
+        self.unreadable.append(rel)
+        self.skipped.add(rel)
+        try:
+            self.skip_file.write_text(json.dumps(sorted(self.skipped), indent=1), encoding="utf-8")
+        except OSError as e:  # the skip list itself is best effort
+            print(f"  could not write {self.skip_file.name}: {e}", file=sys.stderr)
+        print(f"  UNREADABLE {rel}: {err.__class__.__name__} (likely local AV quarantine) - "
+              "recorded in .av-skipped.json, not re-fetched without --force", file=sys.stderr)
+
     def fetch(self, url: str, rel: str) -> Path:
         dest = self._dest(rel)
         if rel in self.skipped and not self.force:
@@ -167,23 +183,29 @@ class Fetcher:
         if self.force or not dest.exists():
             dest.parent.mkdir(parents=True, exist_ok=True)
             tmp = dest.with_suffix(dest.suffix + ".part")
-            _stream(url, tmp)
-            if want and _sha256(tmp, retries=4) != want:
+            try:
+                _stream(url, tmp)
+                got = _sha256(tmp, retries=4) if want else None
+            except OSError as e:
+                # AV can block the freshly written .part before it is hashed or renamed
+                self._mark_unreadable(rel, e, tmp)
+                return dest
+            if want and got != want:
                 tmp.unlink()
                 self.bad.append(rel)
                 print(f"  CHECKSUM MISMATCH {rel} (download discarded)", file=sys.stderr)
                 return dest
-            tmp.replace(dest)
+            try:
+                tmp.replace(dest)
+            except OSError as e:
+                self._mark_unreadable(rel, e, tmp)
+                return dest
             print(f"  downloaded {rel} ({dest.stat().st_size / 1e6:.2f} MB)")
         try:
             digest = _sha256(dest, retries=4)
         except OSError as e:
             # e.g. Windows Defender blocks recordings that contain attack-tool strings
-            self.unreadable.append(rel)
-            self.skipped.add(rel)
-            self.skip_file.write_text(json.dumps(sorted(self.skipped), indent=1), encoding="utf-8")
-            print(f"  UNREADABLE {rel}: {e.__class__.__name__} (likely local AV quarantine) - "
-                  "recorded in .av-skipped.json, not re-fetched without --force", file=sys.stderr)
+            self._mark_unreadable(rel, e)
             return dest
         self.seen[rel] = digest
         if want and want != digest:
